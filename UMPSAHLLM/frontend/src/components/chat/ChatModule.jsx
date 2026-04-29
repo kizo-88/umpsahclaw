@@ -7,8 +7,16 @@ const ChatModule = () => {
     { id: 1, role: 'assistant', text: 'UMPSAHLLM Chat Core Online. How can I assist with your UMPSA Holding tasks today?' }
   ]);
   const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState('llama3.1:8b');
+  const [sessionId] = useState(() => `session-${Math.random().toString(36).substr(2, 9)}`);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
+
+
+  const models = [
+    { id: 'llama3.1:8b', name: 'Llama 3.1 (8B)' },
+    { id: 'qwen3.5:latest', name: 'Qwen 3.5' }
+  ];
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -25,8 +33,14 @@ const ChatModule = () => {
       const response = await fetch('http://localhost:3001/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg })
+        body: JSON.stringify({ 
+          message: userMsg,
+          model: selectedModel,
+          sessionId: sessionId
+        })
+
       });
+
       const data = await response.json();
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: data.response }]);
     } catch (err) {
@@ -75,13 +89,22 @@ const ChatModule = () => {
 
       <div className="pt-4">
         <div className="relative group bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-2xl">
-           <input 
-             className="flex-1 bg-transparent border-none outline-none text-slate-200 px-4 py-2 placeholder:text-slate-500 font-medium"
-             placeholder="Message UMPSAH AI..."
-             value={input}
-             onChange={e => setInput(e.target.value)}
-             onKeyDown={e => e.key === 'Enter' && handleSend()}
-           />
+            <select 
+              className="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 outline-none focus:border-indigo-500/50 transition-all cursor-pointer hover:bg-slate-700"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {models.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <input 
+              className="flex-1 bg-transparent border-none outline-none text-slate-200 px-4 py-2 placeholder:text-slate-500 font-medium"
+              placeholder={`Message with ${models.find(m => m.id === selectedModel)?.name}...`}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
            <button 
              onClick={handleSend}
              className="p-3 rounded-xl bg-indigo-500 text-white hover:bg-indigo-400 active:scale-95 transition-all shadow-lg shadow-indigo-500/20"

@@ -22,7 +22,7 @@ try {
 }
 
 app.post('/api/chat', (req, res) => {
-  const { message, model } = req.body;
+  const { message, model, sessionId = 'web-default' } = req.body;
   
   if (!message) {
       return res.status(400).json({ error: "Message is required" });
@@ -36,14 +36,18 @@ app.post('/api/chat', (req, res) => {
 
   console.log(`Executing PicoClaw task [${targetModel}]: ${safeMessage}`);
 
-  execFile(PICOCLAW_EXE, ['agent', '-m', message, '--model', targetModel], { cwd: path.resolve(__dirname, '../../') }, (error, stdout, stderr) => {
+  execFile(PICOCLAW_EXE, ['agent', '-m', message, '--model', targetModel, '--session', sessionId], { cwd: path.resolve(__dirname, '../../') }, (error, stdout, stderr) => {
       if (error) {
           console.error(`PicoClaw execution error: ${error}`);
           return res.status(500).json({ response: `[PicoClaw OS Error]: Failed to start agent. Error: ${error.message}` });
       }
 
-      // Filter formatting or artifacts from stdout if necessary, otherwise return Raw PicoClaw output
-      let finalReply = stdout.trim();
+      // Strip the ASCII banner and extra whitespace
+      let finalReply = stdout.replace(/^[\s\S]*╚═╝\s+╚═╝\s+╚══╝╚══╝\s*/, '').trim();
+      
+      // If we failed to strip the banner (e.g. it changed), at least trim it
+      if (!finalReply) finalReply = stdout.trim();
+
 
       // Ensure we don't send an empty reply if output goes to stderr
       if (!finalReply && stderr) {

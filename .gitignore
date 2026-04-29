@@ -1,49 +1,11 @@
-# Binaries
-# Go build artifacts
-bin/
-build/
-*.exe
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-/picoclaw
-/picoclaw-test
-cmd/**/workspace
-
-# Picoclaw specific
-
-# PicoClaw
-.picoclaw/
-config.json
-sessions/
-build/
-
-# Coverage
-
-# Secrets & Config (keep templates, ignore actual secrets)
-.env
-config/config.json
-
-# Test
-coverage.txt
-coverage.html
-
-# OS
-.DS_Store
-
-# Ralph workspace
-ralph/
-.ralph/
-tasks/
-
-# Editors
-.vscode/
-.idea/
-
-# Added by goreleaser init:
+node_modules/
 dist/
-
-# Windows Application Icon/Resource
-*.syso
+.env
+*.exe
+.ollama/
+agentskills_temp/
+anthropic_skills_temp/
+*.zip
+*.log
+.picoclaw/
+picoclaw.exe
