@@ -82,6 +82,79 @@
 
 <img src="assets/compare.jpg" alt="PicoClaw" width="512">
 
+## 🚀 UMPSAHLLM: Enterprise AI OS Setup & Deployment
+
+UMPSAHLLM is a multi-user, production-ready Enterprise AI OS built on top of the PicoClaw framework. It features a React-based dashboard, a Node.js backend, and deep integration with Ollama and Firebase.
+
+### 🛠️ Local Development Setup
+
+#### 1. Prerequisites
+- **Node.js** (v18+)
+- **Ollama** (with `llama3.1:8b` and `qwen3.5:latest` models)
+- **Firebase CLI** (`npm install -g firebase-tools`)
+
+#### 2. Backend Initialization
+```bash
+cd UMPSAHLLM/backend
+npm install
+npm start
+```
+The backend runs on `http://localhost:3001` and bridges requests to the core `picoclaw.exe` binary.
+
+#### 3. Frontend Initialization
+```bash
+cd UMPSAHLLM/frontend
+npm install
+npm run dev
+```
+The frontend dashboard will be available at `http://localhost:5173`.
+
+#### 4. Orchestration Script (Windows)
+You can start the entire ecosystem using the provided PowerShell script:
+```powershell
+powershell -ExecutionPolicy Bypass -File UMPSAHLLM/run_umpsahllm.ps1
+```
+
+---
+
+### 🌐 Deployment Guide
+
+#### 1. Frontend (Firebase Hosting)
+The frontend is pre-configured for Firebase.
+```bash
+cd UMPSAHLLM/frontend
+npm run build
+firebase deploy
+```
+
+#### 2. Backend (24/7 Production Server)
+Use **PM2** to ensure the backend stays online:
+```bash
+cd UMPSAHLLM/backend
+npm install
+pm2 start server.js --name umpsahllm-backend
+pm2 save
+```
+
+#### 3. Cloudflare Tunnel (Public Access)
+To expose your local backend to the public internet securely:
+1. Install `cloudflared`.
+2. Authenticate: `cloudflared tunnel login`.
+3. Create a tunnel: `cloudflared tunnel create umpsahllm`.
+4. Route to your domain: `cloudflared tunnel route dns umpsahllm <your-subdomain.com>`.
+5. Run the tunnel:
+```bash
+cloudflared tunnel run --url http://localhost:3001 umpsahllm
+```
+
+---
+
+### 📚 Documentation & Resources
+- **Core Engine**: Built using [PicoClaw](README.md) (Go).
+- **Frontend**: Vite + React + TailwindCSS + Framer Motion.
+- **Auth**: Firebase Authentication.
+- **AI Models**: Ollama (llama3.1, qwen3.5).
+
 ## 🦾 Demonstration
 
 ### 🛠️ Standard Assistant Workflows

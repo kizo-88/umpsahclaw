@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LogOut } from 'lucide-react';
 import Sidebar from './components/ui/Sidebar';
 import ChatModule from './components/chat/ChatModule';
 import AdminModule from './components/admin/AdminModule';
@@ -7,6 +8,10 @@ import PCControlModule from './components/pc-control/PCControlModule';
 import AutomationModule from './components/automation/AutomationModule';
 import CodingModule from './components/coding/CodingModule';
 import { useAppStore } from './store/useAppStore';
+import LoginPage from './components/auth/LoginPage';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect } from 'react';
 
 const GenericModule = ({ title }) => (
   <div className="h-full flex items-center justify-center p-20 flex-col gap-4">
@@ -22,6 +27,28 @@ const GenericModule = ({ title }) => (
 
 function App() {
   const { mode } = useAppStore();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex items-center justify-center">
+        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className="w-12 h-12 bg-indigo-600 rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const renderModule = () => {
     switch(mode) {
@@ -74,9 +101,13 @@ function App() {
                     </div>
                  </div>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400 shadow-xl shadow-indigo-500/20 flex items-center justify-center text-xs font-black text-white hover:bg-indigo-500 transition-all cursor-pointer active:scale-95 group overflow-hidden relative">
-                 AD
-                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400 shadow-xl shadow-indigo-500/20 flex items-center justify-center text-xs font-black text-white hover:bg-indigo-500 transition-all cursor-pointer active:scale-95 group overflow-hidden relative"
+                   onClick={() => auth.signOut()}
+              >
+                 {user.displayName ? user.displayName.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase()}
+                 <div className="absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center">
+                    <LogOut className="w-4 h-4" />
+                 </div>
               </div>
            </div>
         </header>

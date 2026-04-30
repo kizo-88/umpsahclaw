@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Sparkles, LogOut, History } from 'lucide-react';
+import { storageService } from '../../services/storageService';
+import { db, auth } from '../../firebase';
+import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
 const ChatModule = () => {
   const [messages, setMessages] = useState([
@@ -19,18 +22,46 @@ const ChatModule = () => {
   ];
 
   useEffect(() => {
+    // Load local history for the current session
+    const loadHistory = async () => {
+      const history = await storageService.getMessages(sessionId);
+      if (history.length > 0) {
+        setMessages(history);
+      }
+    };
+    loadHistory();
+  }, [sessionId]);
+
+  useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // Persist messages to local IndexedDB whenever they change
+    if (messages.length > 1) {
+      storageService.saveMessages(sessionId, messages);
+    }
   }, [messages, isTyping]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
     const userMsg = input;
     setInput('');
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: userMsg }]);
+    const newMessages = [...messages, { id: Date.now(), role: 'user', text: userMsg }];
+    setMessages(newMessages);
     setIsTyping(true);
 
+    // Sync Title to Firestore (Cloud Index)
+    if (newMessages.length === 2 && auth.currentUser) {
+      try {
+        addDoc(collection(db, "conversations"), {
+          userId: auth.currentUser.uid,
+          sessionId: sessionId,
+          title: userMsg.substring(0, 40) + "...",
+          createdAt: new Date()
+        });
+      } catch (e) { console.error("Cloud sync failed", e); }
+    }
+
     try {
-      const response = await fetch('http://localhost:3001/api/chat', {
+      const response = await fetch('https://lake-eval-engineer-insider.trycloudflare.com/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

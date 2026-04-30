@@ -58,7 +58,9 @@ app.post('/api/chat', (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 UMPSAHLLM Backend hooked and running on http://localhost:${port}`);
+const HOST = '0.0.0.0';
+app.listen(port, HOST, () => {
+  console.log(`🚀 UMPSAHLLM Backend running on http://172.17.27.62:${port}`);
   console.log(`🔗 Interface Target: ${PICOCLAW_EXE}`);
 });
+
