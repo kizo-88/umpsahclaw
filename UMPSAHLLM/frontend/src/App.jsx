@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut } from 'lucide-react';
 import Sidebar from './components/ui/Sidebar';
 import ChatModule from './components/chat/ChatModule';
+import AgentModule from './components/agent/AgentModule';
 import AdminModule from './components/admin/AdminModule';
 import PCControlModule from './components/pc-control/PCControlModule';
 import AutomationModule from './components/automation/AutomationModule';
@@ -53,6 +54,7 @@ function App() {
   const renderModule = () => {
     switch(mode) {
       case 'chat': return <ChatModule />;
+      case 'ai-agent': return <AgentModule />;
       case 'admin': return <AdminModule />;
       case 'pc-control': return <PCControlModule />;
       case 'automation': return <AutomationModule />;

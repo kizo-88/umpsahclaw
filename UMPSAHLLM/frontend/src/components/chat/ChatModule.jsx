@@ -4,6 +4,7 @@ import { Send, Bot, User, Sparkles, LogOut, History } from 'lucide-react';
 import { storageService } from '../../services/storageService';
 import { db, auth } from '../../firebase';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { useAppStore } from '../../store/useAppStore';
 
 const ChatModule = () => {
   const [messages, setMessages] = useState([
@@ -16,16 +17,13 @@ const ChatModule = () => {
   const scrollRef = useRef(null);
 
 
-  const models = [
-    { id: 'llama3.1:8b', name: 'Llama 3.1 (8B)' },
-    { id: 'qwen3.5:latest', name: 'Qwen 3.5' }
-  ];
+  const { availableModels: models } = useAppStore();
 
   useEffect(() => {
     // Load local history for the current session
     const loadHistory = async () => {
       const history = await storageService.getMessages(sessionId);
-      if (history.length > 0) {
+      if (history && history.length > 0) {
         setMessages(history);
       }
     };

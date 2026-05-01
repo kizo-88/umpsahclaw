@@ -36,7 +36,7 @@ app.post('/api/chat', (req, res) => {
 
   console.log(`Executing PicoClaw task [${targetModel}]: ${safeMessage}`);
 
-  execFile(PICOCLAW_EXE, ['agent', '-m', message, '--model', targetModel, '--session', sessionId], { cwd: path.resolve(__dirname, '../../') }, (error, stdout, stderr) => {
+  execFile(PICOCLAW_EXE, ['agent', '-m', message, '--model', targetModel, '--session', sessionId], { cwd: path.resolve(__dirname, '../../'), windowsHide: true, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
       if (error) {
           console.error(`PicoClaw execution error: ${error}`);
           return res.status(500).json({ response: `[PicoClaw OS Error]: Failed to start agent. Error: ${error.message}` });
