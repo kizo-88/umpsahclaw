@@ -59,7 +59,7 @@ const ChatModule = () => {
     }
 
     try {
-      const response = await fetch('https://lake-eval-engineer-insider.trycloudflare.com/api/chat', {
+      const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
