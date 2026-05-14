@@ -9,7 +9,8 @@ import {
   Server, 
   ShieldCheck,
   Cpu,
-  Brain
+  Brain,
+  Layout
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -17,7 +18,8 @@ const Sidebar = () => {
   const { mode, setMode } = useAppStore();
 
   const navItems = [
-    { id: 'chat', label: 'AI Chat', icon: MessageSquare, color: 'text-indigo-400' },
+    { id: 'hub', label: 'Model Hub', icon: Layout, color: 'text-indigo-400' },
+    { id: 'chat', label: 'AI Chat', icon: MessageSquare, color: 'text-sky-400' },
     { id: 'ai-agent', label: 'AI Agent', icon: Brain, color: 'text-purple-400' },
     { id: 'automation', label: 'Automation', icon: Zap, color: 'text-amber-400' },
     { id: 'pc-control', label: 'PC Control', icon: Gamepad2, color: 'text-emerald-400' },
@@ -26,6 +28,7 @@ const Sidebar = () => {
     { id: 'vps', label: 'VPS Manager', icon: Server, color: 'text-rose-400' },
     { id: 'admin', label: 'Admin Panel', icon: ShieldCheck, color: 'text-slate-400' },
   ];
+
 
   return (
     <motion.div 

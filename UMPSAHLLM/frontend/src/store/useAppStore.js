@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export const useAppStore = create((set) => ({
-  mode: 'chat', // chat, ai-agent, automation, pc-control, browser, coding, vps, admin
+  mode: 'hub', // hub, chat, ai-agent, automation, pc-control, browser, coding, vps, admin
   setMode: (mode) => set({ mode }),
   
   user: {
@@ -22,10 +22,15 @@ export const useAppStore = create((set) => ({
   ],
 
   availableModels: [
-    { id: 'llama3.1:8b', name: 'Llama 3.1 (8B)', status: 'online', specialty: 'General Intelligence', role: 'Fact Checker', color: 'text-indigo-400' },
-    { id: 'qwen3.5:latest', name: 'Qwen 3.5', status: 'online', specialty: 'Coding & Logic', role: 'Technical Architect', color: 'text-emerald-400' },
-    { id: 'deepseek-v3', name: 'DeepSeek V3', status: 'standby', specialty: 'Advanced Reasoning', role: 'Security Auditor', color: 'text-rose-400' }
+    { id: 'phi3-mini', name: 'Phi-3 Mini', status: 'online', engine: 'NAS', specialty: 'Fast & Light', role: 'System Assistant', color: 'text-indigo-400', downloaded: true, size: '2.1 GB' },
+    { id: 'llama3.1-8b', name: 'Llama 3.1 (8B)', status: 'ready', engine: 'Local', specialty: 'Balanced Intelligence', role: 'General Analyst', color: 'text-emerald-400', downloaded: false, size: '4.7 GB' },
+    { id: 'qwen2.5-7b', name: 'Qwen 2.5 (7B)', status: 'ready', engine: 'Local', specialty: 'Code & Logic', role: 'Tech Lead', color: 'text-blue-400', downloaded: false, size: '4.2 GB' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', status: 'online', engine: 'Cloud', specialty: 'Extreme Reasoning', role: 'Master Agent', color: 'text-amber-400', downloaded: true, size: '0 GB' }
   ],
+
+  setDownloaded: (id) => set((state) => ({
+    availableModels: state.availableModels.map(m => m.id === id ? { ...m, downloaded: true, status: 'online' } : m)
+  })),
 
   updateModelRole: (id, role) => set((state) => ({
     availableModels: state.availableModels.map(m => m.id === id ? { ...m, role } : m)

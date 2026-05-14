@@ -59,7 +59,11 @@ const ChatModule = () => {
     }
 
     try {
-      const response = await fetch('https://api.umpsahllm.com/api/chat', {
+      // Determine processing engine from state
+      const modelMeta = models.find(m => m.id === selectedModel);
+      const engine = modelMeta?.engine || 'NAS';
+
+      const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -67,17 +71,33 @@ const ChatModule = () => {
           model: selectedModel,
           sessionId: sessionId
         })
-
       });
 
       const data = await response.json();
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: data.response }]);
+      const assistantMsg = data.response;
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+
+      // 🛰️ Centralized NAS Logging (Phase 2)
+      fetch('https://submerge-trustable-approve.ngrok-free.dev/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userMsg,
+          response: assistantMsg,
+          engine: engine,
+          model: selectedModel,
+          userId: auth.currentUser?.email || 'anonymous',
+          timestamp: new Date().toISOString()
+        })
+      }).catch(e => console.error("Logging failed", e));
+
     } catch (err) {
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: 'Error: Connection to Backend Failed.' }]);
     } finally {
       setIsTyping(false);
     }
   };
+
 
   return (
     <div className="h-full flex flex-col p-6 max-w-5xl mx-auto w-full relative">
@@ -118,15 +138,24 @@ const ChatModule = () => {
 
       <div className="pt-4">
         <div className="relative group bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-2xl">
-            <select 
-              className="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 outline-none focus:border-indigo-500/50 transition-all cursor-pointer hover:bg-slate-700"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              {models.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select 
+                className="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 outline-none focus:border-indigo-500/50 transition-all cursor-pointer hover:bg-slate-700"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+              >
+                {models.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <div className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
+                models.find(m => m.id === selectedModel)?.engine === 'NAS' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' :
+                models.find(m => m.id === selectedModel)?.engine === 'Local' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                'bg-amber-500/10 border-amber-500/30 text-amber-400'
+              }`}>
+                {models.find(m => m.id === selectedModel)?.engine}
+              </div>
+            </div>
             <input 
               className="flex-1 bg-transparent border-none outline-none text-slate-200 px-4 py-2 placeholder:text-slate-500 font-medium"
               placeholder={`Message with ${models.find(m => m.id === selectedModel)?.name}...`}

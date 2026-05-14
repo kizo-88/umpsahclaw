@@ -10,6 +10,7 @@ import AutomationModule from './components/automation/AutomationModule';
 import CodingModule from './components/coding/CodingModule';
 import { useAppStore } from './store/useAppStore';
 import LoginPage from './components/auth/LoginPage';
+import ModelHub from './components/hub/ModelHub';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
@@ -61,7 +62,8 @@ function App() {
       case 'browser': return <GenericModule title="Agent Browser" />;
       case 'coding': return <CodingModule />;
       case 'vps': return <GenericModule title="VPS Manager" />;
-      default: return <ChatModule />;
+      case 'hub': return <ModelHub />;
+      default: return <ModelHub />;
     }
   };
 

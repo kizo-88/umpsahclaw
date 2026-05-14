@@ -21,6 +21,37 @@ try {
   console.log("⚠️ Native C++ Addon not built. Hooking via Node Child Process strictly to PicoClaw.");
 }
 
+const fs = require('fs');
+
+// Ensure training data directory exists
+const TRAINING_DATA_DIR = path.resolve(__dirname, 'training_data');
+if (!fs.existsSync(TRAINING_DATA_DIR)) {
+    fs.mkdirSync(TRAINING_DATA_DIR, { recursive: true });
+}
+
+app.post('/api/log', (req, res) => {
+    const { prompt, response, engine, model, userId, timestamp } = req.body;
+    
+    const logEntry = JSON.stringify({
+        prompt,
+        response,
+        engine,
+        model,
+        userId,
+        timestamp: timestamp || new Date().toISOString()
+    }) + '\n';
+
+    const logFile = path.join(TRAINING_DATA_DIR, `interactions_${new Date().toISOString().split('T')[0]}.jsonl`);
+    
+    fs.appendFile(logFile, logEntry, (err) => {
+        if (err) {
+            console.error('Failed to log interaction:', err);
+            return res.status(500).json({ error: 'Failed to log interaction' });
+        }
+        res.json({ status: 'logged' });
+    });
+});
+
 app.post('/api/chat', (req, res) => {
   const { message, model, sessionId = 'web-default' } = req.body;
   
