@@ -1,0 +1,1 @@
+[{"id":"vps-01","name":"Web Server Alpha","status":"running","ip":"172.17.0.2","type":"Node.js"},{"id":"vps-02","name":"Database Prod","status":"running","ip":"172.17.0.3","type":"PostgreSQL"}]

@@ -11,6 +11,7 @@ import CodingModule from './components/coding/CodingModule';
 import { useAppStore } from './store/useAppStore';
 import LoginPage from './components/auth/LoginPage';
 import ModelHub from './components/hub/ModelHub';
+import VPSModule from './components/vps/VPSModule';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
@@ -61,7 +62,7 @@ function App() {
       case 'automation': return <AutomationModule />;
       case 'browser': return <GenericModule title="Agent Browser" />;
       case 'coding': return <CodingModule />;
-      case 'vps': return <GenericModule title="VPS Manager" />;
+      case 'vps': return <VPSModule />;
       case 'hub': return <ModelHub />;
       default: return <ModelHub />;
     }

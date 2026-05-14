@@ -52,6 +52,33 @@ app.post('/api/log', (req, res) => {
     });
 });
 
+// VPS Management System (Phase 5)
+const VPS_REGISTRY = path.resolve(__dirname, 'vps_registry.json');
+if (!fs.existsSync(VPS_REGISTRY)) {
+    fs.writeFileSync(VPS_REGISTRY, JSON.stringify([
+        { id: 'vps-01', name: 'Web Server Alpha', status: 'running', ip: '172.17.0.2', type: 'Node.js' },
+        { id: 'vps-02', name: 'Database Prod', status: 'running', ip: '172.17.0.3', type: 'PostgreSQL' }
+    ]));
+}
+
+app.get('/api/vps/list', (req, res) => {
+    const data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
+    res.json(data.map(v => ({
+        ...v,
+        cpu: v.status === 'running' ? `${Math.floor(Math.random() * 20)}%` : '0%',
+        ram: v.status === 'running' ? `${Math.floor(Math.random() * 512)}MB / 1GB` : '0B / 1GB',
+        uptime: v.status === 'running' ? '14d 2h' : '-'
+    })));
+});
+
+app.post('/api/vps/toggle', (req, res) => {
+    const { id } = req.body;
+    let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
+    data = data.map(v => v.id === id ? { ...v, status: v.status === 'running' ? 'stopped' : 'running' } : v);
+    fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
+    res.json({ status: 'updated' });
+});
+
 app.post('/api/cloud-chat', async (req, res) => {
     const { message, model, sessionId } = req.body;
     const API_KEY = process.env.CLOUD_LLM_API_KEY;
