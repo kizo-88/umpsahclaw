@@ -59,7 +59,7 @@ const ChatModule = () => {
     }
 
     try {
-      const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
+      const response = await fetch('https://api.umpsahllm.com/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -9,8 +9,8 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
-// Point directly to the compiled PicoClaw binary located two folders up
-const PICOCLAW_EXE = path.resolve(__dirname, '../../picoclaw.exe');
+// Use environment variable for the binary path (useful for Docker), fallback to local path
+const PICOCLAW_EXE = process.env.PICOCLAW_EXE_PATH || path.resolve(__dirname, '../../picoclaw.exe');
 
 let addon;
 try {
