@@ -3,25 +3,47 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Play, Shield, Zap, Cloud, Cpu, HardDrive, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
+import { localLLMService } from '../../services/localLLMService';
+
 const ModelHub = () => {
   const { availableModels, setMode, setDownloaded } = useAppStore();
   const [downloading, setDownloading] = useState(null);
   const [progress, setProgress] = useState(0);
 
-  const handleDownload = (id) => {
-    setDownloading(id);
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 5;
-      setProgress(p);
-      if (p >= 100) {
-        clearInterval(interval);
-        setDownloaded(id);
-        setDownloading(null);
-        setProgress(0);
-      }
-    }, 200);
+  const handleDownload = async (model) => {
+    if (model.engine !== 'Local') {
+      // Mock for NAS/Cloud
+      setDownloading(model.id);
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 5;
+        setProgress(p);
+        if (p >= 100) {
+          clearInterval(interval);
+          setDownloaded(model.id);
+          setDownloading(null);
+          setProgress(0);
+        }
+      }, 100);
+      return;
+    }
+
+    // Real WebLLM Init
+    setDownloading(model.id);
+    try {
+      await localLLMService.init(model.id, (p) => {
+        setProgress(Math.round(p * 100));
+      });
+      setDownloaded(model.id);
+    } catch (e) {
+      console.error("WebLLM Init Failed", e);
+      alert("Local Engine failed to initialize. Ensure your browser supports WebGPU.");
+    } finally {
+      setDownloading(null);
+      setProgress(0);
+    }
   };
+
 
   const getEngineIcon = (engine) => {
     switch(engine) {
@@ -122,7 +144,7 @@ const ModelHub = () => {
                     </button>
                   ) : (
                     <button 
-                      onClick={() => handleDownload(model.id)}
+                      onClick={() => handleDownload(model)}
                       className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-slate-700"
                     >
                       <Download className="w-3 h-3" />

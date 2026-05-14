@@ -5,19 +5,29 @@ import { storageService } from '../../services/storageService';
 import { db, auth } from '../../firebase';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
+import { localLLMService } from '../../services/localLLMService';
 
 const ChatModule = () => {
   const [messages, setMessages] = useState([
     { id: 1, role: 'assistant', text: 'UMPSAHLLM Chat Core Online. How can I assist with your UMPSA Holding tasks today?' }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('llama3.1:8b');
+  const [selectedModel, setSelectedModel] = useState('phi3-mini');
   const [sessionId] = useState(() => `session-${Math.random().toString(36).substr(2, 9)}`);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
 
   const { availableModels: models } = useAppStore();
+
+  useEffect(() => {
+    // Select the first downloaded model if current is not downloaded
+    const current = models.find(m => m.id === selectedModel);
+    if (!current?.downloaded) {
+      const firstAvailable = models.find(m => m.downloaded);
+      if (firstAvailable) setSelectedModel(firstAvailable.id);
+    }
+  }, [models]);
 
   useEffect(() => {
     // Load local history for the current session
@@ -59,25 +69,39 @@ const ChatModule = () => {
     }
 
     try {
-      // Determine processing engine from state
       const modelMeta = models.find(m => m.id === selectedModel);
       const engine = modelMeta?.engine || 'NAS';
+      let assistantMsg = "";
 
-      const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: userMsg,
-          model: selectedModel,
-          sessionId: sessionId
-        })
-      });
+      if (engine === 'Local') {
+        // 🚀 Local Inference Mode (Phase 3)
+        await localLLMService.generateStream(newMessages, (fullText) => {
+          assistantMsg = fullText;
+          // Optimized UI update for streaming
+          setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
+          setIsTyping(false); // Hide typing indicator once stream starts
+        });
+        
+        // Finalize the message with a real ID
+        setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+      } else {
+        // 🛰️ NAS / Cloud Mode
+        const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: userMsg,
+            model: selectedModel,
+            sessionId: sessionId
+          })
+        });
 
-      const data = await response.json();
-      const assistantMsg = data.response;
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+        const data = await response.json();
+        assistantMsg = data.response;
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+      }
 
-      // 🛰️ Centralized NAS Logging (Phase 2)
+      // 📡 Centralized NAS Logging (Shared across all engines)
       fetch('https://submerge-trustable-approve.ngrok-free.dev/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,7 +116,8 @@ const ChatModule = () => {
       }).catch(e => console.error("Logging failed", e));
 
     } catch (err) {
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: 'Error: Connection to Backend Failed.' }]);
+      console.error(err);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: 'Error: Connection Failed or GPU Memory Full.' }]);
     } finally {
       setIsTyping(false);
     }
