@@ -77,15 +77,27 @@ const ChatModule = () => {
         // 🚀 Local Inference Mode (Phase 3)
         await localLLMService.generateStream(newMessages, (fullText) => {
           assistantMsg = fullText;
-          // Optimized UI update for streaming
           setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
-          setIsTyping(false); // Hide typing indicator once stream starts
+          setIsTyping(false);
         });
-        
-        // Finalize the message with a real ID
         setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+      } else if (engine === 'Cloud') {
+        // ☁️ Cloud Engine Proxy (Phase 4)
+        const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/cloud-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: userMsg,
+            model: selectedModel,
+            sessionId: sessionId
+          })
+        });
+
+        const data = await response.json();
+        assistantMsg = data.response;
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
       } else {
-        // 🛰️ NAS / Cloud Mode
+        // 🛰️ NAS Engine
         const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

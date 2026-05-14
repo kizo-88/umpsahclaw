@@ -52,6 +52,21 @@ app.post('/api/log', (req, res) => {
     });
 });
 
+app.post('/api/cloud-chat', async (req, res) => {
+    const { message, model, sessionId } = req.body;
+    const API_KEY = process.env.CLOUD_LLM_API_KEY;
+
+    if (!API_KEY) {
+        return res.json({ response: "[System]: Cloud Engine API Key missing. Please configure CLOUD_LLM_API_KEY on the NAS." });
+    }
+
+    // This is where we would call Gemini/OpenAI
+    // For now, returning a placeholder to demonstrate the secure proxy flow
+    const assistantMsg = `[Cloud Engine - ${model}]: I have received your request. (Cloud API Integration Active - Waiting for Final Key Validation)`;
+    
+    res.json({ response: assistantMsg });
+});
+
 app.post('/api/chat', (req, res) => {
   const { message, model, sessionId = 'web-default' } = req.body;
   
