@@ -83,7 +83,7 @@ const ChatModule = () => {
         setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
       } else if (engine === 'Cloud') {
         // ☁️ Cloud Engine Proxy (Phase 4)
-        const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/cloud-chat', {
+        const response = await fetch('https://api.umpsahllm.com/api/cloud-chat', {
           method: 'POST',
           headers: { 
           'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const ChatModule = () => {
         setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
       } else {
         // 🛰️ NAS Engine
-        const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
+        const response = await fetch('https://api.umpsahllm.com/api/chat', {
           method: 'POST',
           headers: { 
           'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ const ChatModule = () => {
       }
 
       // 📡 Centralized NAS Logging (Shared across all engines)
-      fetch('https://submerge-trustable-approve.ngrok-free.dev/api/log', {
+      fetch('https://api.umpsahllm.com/api/log', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
