@@ -52,7 +52,19 @@ app.post('/api/log', (req, res) => {
     });
 });
 
-// VPS Management System (Phase 5)
+// VPS Management System (Phase 5) & Compute Engine (Docker)
+const Docker = require('dockerode');
+const docker = new Docker(); // Automatically connects to local docker socket/pipe
+let useDocker = false;
+
+// Test Docker connection on startup
+docker.ping().then(() => {
+    console.log("🐳 Docker Engine connected successfully! Compute Engine active.");
+    useDocker = true;
+}).catch((err) => {
+    console.log("⚠️ Docker Engine not detected. VPS Manager running in Mock Mode.");
+});
+
 const VPS_REGISTRY = path.resolve(__dirname, 'vps_registry.json');
 if (!fs.existsSync(VPS_REGISTRY)) {
     fs.writeFileSync(VPS_REGISTRY, JSON.stringify([
@@ -61,7 +73,27 @@ if (!fs.existsSync(VPS_REGISTRY)) {
     ]));
 }
 
-app.get('/api/vps/list', (req, res) => {
+app.get('/api/vps/list', async (req, res) => {
+    if (useDocker) {
+        try {
+            const containers = await docker.listContainers({ all: true });
+            const vpsList = containers.map(c => ({
+                id: c.Id.substring(0, 12),
+                name: c.Names[0].replace('/', ''),
+                status: c.State === 'running' ? 'running' : 'stopped',
+                ip: Object.values(c.NetworkSettings.Networks)[0]?.IPAddress || '-',
+                cpu: c.State === 'running' ? 'N/A' : '0%', // Requires stats stream for real CPU
+                ram: c.State === 'running' ? 'N/A' : '0B',
+                uptime: c.Status,
+                type: c.Image
+            }));
+            return res.json(vpsList);
+        } catch (e) {
+            console.error("Docker error:", e);
+        }
+    }
+
+    // Fallback to Mock
     const data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
     res.json(data.map(v => ({
         ...v,
@@ -71,8 +103,26 @@ app.get('/api/vps/list', (req, res) => {
     })));
 });
 
-app.post('/api/vps/toggle', (req, res) => {
+app.post('/api/vps/toggle', async (req, res) => {
     const { id } = req.body;
+
+    if (useDocker) {
+        try {
+            const container = docker.getContainer(id);
+            const info = await container.inspect();
+            if (info.State.Running) {
+                await container.stop();
+            } else {
+                await container.start();
+            }
+            return res.json({ status: 'updated via Docker' });
+        } catch (e) {
+            console.error("Docker toggle error:", e);
+            // If it fails (maybe the ID was from the mock registry), fall through to mock
+        }
+    }
+
+    // Fallback to Mock
     let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
     data = data.map(v => v.id === id ? { ...v, status: v.status === 'running' ? 'stopped' : 'running' } : v);
     fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
