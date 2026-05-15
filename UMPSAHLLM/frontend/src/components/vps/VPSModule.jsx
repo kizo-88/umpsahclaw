@@ -33,7 +33,9 @@ const VPSModule = () => {
 
   const fetchVPS = async () => {
     try {
-      const res = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/list');
+      const res = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/list', {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
       const data = await res.json();
       setVpsList(data);
       if (selectedVps) {
@@ -59,7 +61,10 @@ const VPSModule = () => {
     try {
       await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/toggle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify({ id })
       });
       fetchVPS();
@@ -74,7 +79,10 @@ const VPSModule = () => {
     try {
       await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify({ name: newVpsName, image: newVpsImage })
       });
       setShowCreateModal(false);

@@ -85,7 +85,10 @@ const ChatModule = () => {
         // ☁️ Cloud Engine Proxy (Phase 4)
         const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/cloud-chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
           body: JSON.stringify({ 
             message: userMsg,
             model: selectedModel,
@@ -100,7 +103,10 @@ const ChatModule = () => {
         // 🛰️ NAS Engine
         const response = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
           body: JSON.stringify({ 
             message: userMsg,
             model: selectedModel,
@@ -116,8 +122,12 @@ const ChatModule = () => {
       // 📡 Centralized NAS Logging (Shared across all engines)
       fetch('https://submerge-trustable-approve.ngrok-free.dev/api/log', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
         body: JSON.stringify({
+
           prompt: userMsg,
           response: assistantMsg,
           engine: engine,
