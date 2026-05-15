@@ -118,15 +118,55 @@ app.post('/api/vps/toggle', async (req, res) => {
             return res.json({ status: 'updated via Docker' });
         } catch (e) {
             console.error("Docker toggle error:", e);
-            // If it fails (maybe the ID was from the mock registry), fall through to mock
         }
     }
 
-    // Fallback to Mock
     let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
     data = data.map(v => v.id === id ? { ...v, status: v.status === 'running' ? 'stopped' : 'running' } : v);
     fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
     res.json({ status: 'updated' });
+});
+
+app.post('/api/vps/create', async (req, res) => {
+    const { name, image = 'nginx:alpine' } = req.body;
+
+    if (useDocker) {
+        try {
+            // First ensure the image exists or pull it
+            await new Promise((resolve, reject) => {
+                docker.pull(image, (err, stream) => {
+                    if (err) return reject(err);
+                    docker.modem.followProgress(stream, (err, res) => err ? reject(err) : resolve(res));
+                });
+            });
+
+            const container = await docker.createContainer({
+                Image: image,
+                name: name.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now().toString().slice(-4),
+                HostConfig: {
+                    Memory: 512 * 1024 * 1024, // 512MB RAM Limit
+                    NanoCPUs: 500000000        // 0.5 CPU Limit
+                }
+            });
+            await container.start();
+            return res.json({ status: 'created', id: container.id });
+        } catch (e) {
+            console.error("Docker create error:", e);
+            return res.status(500).json({ error: "Failed to provision via Docker" });
+        }
+    }
+
+    // Mock Fallback
+    let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
+    data.push({
+        id: `vps-mock-${Date.now()}`,
+        name: name,
+        status: 'running',
+        ip: `172.17.0.${Math.floor(Math.random()*100)}`,
+        type: image
+    });
+    fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
+    res.json({ status: 'created' });
 });
 
 app.post('/api/cloud-chat', async (req, res) => {

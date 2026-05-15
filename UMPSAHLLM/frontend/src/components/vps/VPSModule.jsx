@@ -25,6 +25,12 @@ const VPSModule = () => {
   const [selectedVps, setSelectedVps] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Provisioning Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newVpsName, setNewVpsName] = useState('');
+  const [newVpsImage, setNewVpsImage] = useState('nginx:alpine');
+  const [isCreating, setIsCreating] = useState(false);
+
   const fetchVPS = async () => {
     try {
       const res = await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/list');
@@ -59,6 +65,27 @@ const VPSModule = () => {
       fetchVPS();
     } catch (e) {
       console.error("Toggle failed", e);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newVpsName) return;
+    setIsCreating(true);
+    try {
+      await fetch('https://submerge-trustable-approve.ngrok-free.dev/api/vps/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newVpsName, image: newVpsImage })
+      });
+      setShowCreateModal(false);
+      setNewVpsName('');
+      setNewVpsImage('nginx:alpine');
+      fetchVPS(); // Refresh list to show new VPS
+    } catch (e) {
+      console.error("Failed to provision", e);
+      alert("Provisioning failed. Check NAS logs.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -104,11 +131,81 @@ const VPSModule = () => {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-indigo-600/20">
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-indigo-600/20"
+            >
               <Plus className="w-4 h-4" />
               Provision New VPS
             </button>
           </div>
+
+          {/* Create VPS Modal */}
+          <AnimatePresence>
+            {showCreateModal && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+                >
+                  <h2 className="text-xl font-black text-white mb-6">Provision Compute Instance</h2>
+                  
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Instance Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Analytics Engine" 
+                        value={newVpsName}
+                        onChange={e => setNewVpsName(e.target.value)}
+                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Base Image</label>
+                      <select 
+                        value={newVpsImage}
+                        onChange={e => setNewVpsImage(e.target.value)}
+                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all appearance-none"
+                      >
+                        <option value="nginx:alpine">Web Server (Nginx Alpine)</option>
+                        <option value="node:18-alpine">Node.js 18 Microservice</option>
+                        <option value="python:3.10-slim">Python 3.10 Data Worker</option>
+                      </select>
+                    </div>
+                    <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                      <p className="text-[10px] font-bold text-indigo-400">Instances are automatically limited to 0.5 CPU cores and 512MB RAM via Docker Engine.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowCreateModal(false)}
+                      className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleCreate}
+                      disabled={isCreating || !newVpsName}
+                      className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                    >
+                      {isCreating ? <Zap className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />}
+                      {isCreating ? 'Deploying...' : 'Deploy'}
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
 
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
             <AnimatePresence mode="popLayout">
