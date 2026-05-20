@@ -22,8 +22,12 @@ services:
     environment:
       - OLLAMA_HOST=http://ollama:11434
       - PICOCLAW_EXE_PATH=/picoclaw
+      - CLOUD_LLM_API_KEY=${CLOUD_LLM_API_KEY}
     ports:
       - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./UMPSAHLLM/backend/training_data:/app/training_data
     depends_on:
       - ollama
     restart: always
@@ -34,5 +38,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: umpsah-tunnel
     # Replace the variable below with your token or use an .env file
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - backend
     restart: always
+
