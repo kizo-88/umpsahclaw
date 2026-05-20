@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # AI Brain (Ollama)
+  # This container handles the actual LLM models (llama3.1, etc.)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: umpsah-brain
+    volumes:
+      - ./ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: always
+
+  # UMPSAHLLM Backend Bridge
+  # This container runs the Node.js API and the PicoClaw engine
+  backend:
+    build:
+      context: .
+      dockerfile: UMPSAHLLM/backend/Dockerfile
+    container_name: umpsah-backend
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - PICOCLAW_EXE_PATH=/picoclaw
+    ports:
+      - "3001:3001"
+    depends_on:
+      - ollama
+    restart: always
+
+  # Cloudflare Tunnel (Secure Public Access)
+  # This exposes your local backend to the internet without opening ports
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: umpsah-tunnel
+    # Replace the variable below with your token or use an .env file
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: always

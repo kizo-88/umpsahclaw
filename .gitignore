@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.env.*
 *.exe
 .ollama/
 agentskills_temp/
