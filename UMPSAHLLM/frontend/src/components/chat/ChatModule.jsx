@@ -12,7 +12,7 @@ const ChatModule = () => {
     { id: 1, role: 'assistant', text: 'UMPSAHLLM Chat Core Online. How can I assist with your UMPSA Holding tasks today?' }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('phi3-mini');
+  const [selectedModel, setSelectedModel] = useState('llama3.1-8b');
   const [sessionId] = useState(() => `session-${Math.random().toString(36).substr(2, 9)}`);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);

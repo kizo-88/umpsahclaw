@@ -191,8 +191,15 @@ app.post('/api/chat', (req, res) => {
       return res.status(400).json({ error: "Message is required" });
   }
 
+  // Map frontend model IDs to Ollama model names
+  const MODEL_MAP = {
+    'llama3.1-8b': 'llama3.1:8b',
+    'phi3-mini': 'phi3:mini',
+    'qwen2.5-7b': 'qwen2.5:7b',
+  };
+
   // Use requested model or default to llama3.1:8b
-  const targetModel = model || 'llama3.1:8b';
+  const targetModel = MODEL_MAP[model] || model || 'llama3.1:8b';
 
   // Escape quotation marks strictly to prevent CLI injection
   const safeMessage = message.replace(/"/g, '\\"');
