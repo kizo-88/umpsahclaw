@@ -24,7 +24,7 @@ const Sidebar = () => {
     { id: 'automation', label: 'Automation', icon: Zap, color: 'text-amber-400' },
     { id: 'pc-control', label: 'PC Control', icon: Gamepad2, color: 'text-emerald-400' },
     { id: 'browser', label: 'Agent Browser', icon: Globe, color: 'text-sky-400' },
-    { id: 'coding', label: 'Vibe IDE', icon: Code2, color: 'text-purple-400' },
+    { id: 'coding', label: 'Code IDE', icon: Code2, color: 'text-purple-400' },
     { id: 'vps', label: 'VPS Manager', icon: Server, color: 'text-rose-400' },
     { id: 'admin', label: 'Admin Panel', icon: ShieldCheck, color: 'text-slate-400' },
   ];

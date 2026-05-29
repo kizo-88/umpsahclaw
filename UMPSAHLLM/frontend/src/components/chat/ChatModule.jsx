@@ -70,67 +70,48 @@ const ChatModule = () => {
 
     try {
       const modelMeta = models.find(m => m.id === selectedModel);
-      const engine = modelMeta?.engine || 'NAS';
       let assistantMsg = "";
-
-      if (engine === 'Local') {
-        // 🚀 Local Inference Mode (Phase 3)
-        await localLLMService.generateStream(newMessages, (fullText) => {
-          assistantMsg = fullText;
-          setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
-          setIsTyping(false);
-        });
-        setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
-      } else if (engine === 'Cloud') {
-        // ☁️ Cloud Engine Proxy (Phase 4)
-        const response = await fetch('https://api.umpsahllm.com/api/cloud-chat', {
+      // 🚀 Step 1: Fetch RAG Context from NAS
+      let ragContext = "";
+      try {
+        const ragRes = await fetch('http://localhost:3002/api/rag/search', {
           method: 'POST',
-          headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-          body: JSON.stringify({ 
-            message: userMsg,
-            model: selectedModel,
-            sessionId: sessionId
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: userMsg })
         });
-
-        const data = await response.json();
-        assistantMsg = data.response;
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
-      } else {
-        // 🛰️ NAS Engine
-        const response = await fetch('https://api.umpsahllm.com/api/chat', {
-          method: 'POST',
-          headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-          body: JSON.stringify({ 
-            message: userMsg,
-            model: selectedModel,
-            sessionId: sessionId
-          })
-        });
-
-        const data = await response.json();
-        assistantMsg = data.response;
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+        const ragData = await ragRes.json();
+        if (ragData.context) {
+          ragContext = `\n\n[NAS VAULT CONTEXT]:\n${ragData.context}`;
+        }
+      } catch (e) {
+        console.log("NAS RAG unavailable.", e);
       }
 
-      // 📡 Centralized NAS Logging (Shared across all engines)
-      fetch('https://api.umpsahllm.com/api/log', {
+      // 🚀 Step 2: Inject Context into Local Prompt
+      const localMessages = [...newMessages];
+      if (ragContext) {
+        localMessages.unshift({ role: 'system', text: `You are UMPSAHLLM. Use this context from the user's NAS vault to answer: ${ragContext}` });
+      }
+
+      // 🚀 Step 3: Local GPU Inference
+      await localLLMService.generateStream(localMessages, (fullText) => {
+        assistantMsg = fullText;
+        setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
+        setIsTyping(false);
+      });
+      setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+
+      // 📡 Centralized NAS Logging
+      fetch('http://localhost:3002/api/log', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({
-
           prompt: userMsg,
           response: assistantMsg,
-          engine: engine,
+          engine: 'Local WebGPU',
           model: selectedModel,
           userId: auth.currentUser?.email || 'anonymous',
           timestamp: new Date().toISOString()

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Sparkles, Cpu, Send, Bot, MessageSquare, ShieldCheck, ChevronRight, Loader2, Settings2, X, Check } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { localLLMService } from '../../services/localLLMService';
 
 const AgentModule = () => {
   const { availableModels, updateModelRole } = useAppStore();
@@ -28,30 +29,23 @@ const AgentModule = () => {
     const currentPrompt = prompt;
     const modelResponses = [];
 
-    // Step 1: Parallel Insights Gathering with Roles
+    // Step 1: Sequential Insights Gathering with Roles using Local WebGPU
     for (const model of availableModels) {
-      if (model.id === 'deepseek-v3') continue; // Skip standby models
+      if (model.id === 'deepseek-v3') continue;
 
       setDiscussion(prev => [...prev, { 
         id: Date.now() + model.id, 
         role: 'system', 
-        text: `Querying ${model.name} as ${model.role}...`,
+        text: `Querying Local Engine as ${model.role}...`,
         modelName: model.name,
         status: 'loading'
       }]);
 
       try {
-        // Integrate role into the prompt
         const rolePrompt = `You are acting as: ${model.role}. \n\nTask: ${currentPrompt}`;
-
-        const response = await fetch('http://localhost:3001/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: rolePrompt, model: model.id })
-        });
-        const data = await response.json();
+        const responseText = await localLLMService.generate([{ role: 'user', content: rolePrompt }]);
         
-        modelResponses.push({ name: model.name, role: model.role, text: data.response });
+        modelResponses.push({ name: model.name, role: model.role, text: responseText });
         
         setDiscussion(prev => {
           const filtered = prev.filter(d => d.modelName !== model.name);
@@ -60,13 +54,14 @@ const AgentModule = () => {
             role: 'agent', 
             name: model.name,
             agentRole: model.role,
-            text: data.response,
+            text: responseText,
             color: model.color,
             status: 'done'
           }];
         });
       } catch (err) {
-        setDiscussion(prev => [...prev, { role: 'system', text: `Failed to reach ${model.name}`, status: 'error' }]);
+        console.error(err);
+        setDiscussion(prev => [...prev, { role: 'system', text: `Failed to generate as ${model.role}`, status: 'error' }]);
       }
     }
 
@@ -84,16 +79,12 @@ const AgentModule = () => {
         modelResponses.map(r => `${r.name} (${r.role}): ${r.text.substring(0, 500)}`).join('\n') + 
         `\nSummarize into a single consensus answer.`;
 
-      const response = await fetch('http://localhost:3001/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: synthesisPrompt, model: availableModels[0].id })
-      });
-      const data = await response.json();
-      setConsensus(data.response);
+      const responseText = await localLLMService.generate([{ role: 'user', content: synthesisPrompt }]);
+      setConsensus(responseText);
       setActiveStep(3);
     } catch (err) {
-      setConsensus("Synthesis failed. Please review individual agent responses.");
+      console.error(err);
+      setConsensus("Synthesis failed. Ensure a local model is downloaded and loaded.");
     } finally {
       setIsDiscussing(false);
     }

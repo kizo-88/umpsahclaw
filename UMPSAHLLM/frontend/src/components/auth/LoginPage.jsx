@@ -60,6 +60,7 @@ const LoginPage = () => {
                 <input 
                   type="email"
                   required
+                  autoComplete="email"
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                   placeholder="admin@umpsaholdings.my"
                   value={email}
@@ -75,6 +76,7 @@ const LoginPage = () => {
                 <input 
                   type="password"
                   required
+                  autoComplete="current-password"
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                   placeholder="••••••••"
                   value={password}

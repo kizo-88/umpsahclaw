@@ -22,10 +22,9 @@ export const useAppStore = create((set) => ({
   ],
 
   availableModels: [
-    { id: 'llama3.1-8b', name: 'Llama 3.1 (8B)', status: 'online', engine: 'NAS', specialty: 'Balanced Intelligence', role: 'System Assistant', color: 'text-emerald-400', downloaded: true, size: '4.7 GB' },
-    { id: 'phi3-mini', name: 'Phi-3 Mini', status: 'ready', engine: 'Local', specialty: 'Fast & Light', role: 'General Analyst', color: 'text-indigo-400', downloaded: false, size: '2.1 GB' },
-    { id: 'qwen2.5-7b', name: 'Qwen 2.5 (7B)', status: 'ready', engine: 'Local', specialty: 'Code & Logic', role: 'Tech Lead', color: 'text-blue-400', downloaded: false, size: '4.2 GB' },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', status: 'online', engine: 'Cloud', specialty: 'Extreme Reasoning', role: 'Master Agent', color: 'text-amber-400', downloaded: true, size: '0 GB' }
+    { id: 'Llama-3.1-8B-Instruct-q4f32_1-MLC', name: 'Llama 3.1 (8B)', status: 'ready', engine: 'Local', specialty: 'Balanced Intelligence', role: 'Best for Everything & RAG', color: 'text-emerald-400', downloaded: false, size: '4.7 GB' },
+    { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi-3.5 Mini', status: 'ready', engine: 'Local', specialty: 'Fast & Light', role: 'Best for Fast Automation', color: 'text-indigo-400', downloaded: false, size: '2.1 GB' },
+    { id: 'Qwen2.5-7B-Instruct-q4f32_1-MLC', name: 'Qwen 2.5 (7B)', status: 'ready', engine: 'Local', specialty: 'Code & Logic', role: 'Best for Coding & Debugging', color: 'text-blue-400', downloaded: false, size: '4.2 GB' }
   ],
 
   setDownloaded: (id) => set((state) => ({

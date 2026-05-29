@@ -8,6 +8,7 @@ import AdminModule from './components/admin/AdminModule';
 import PCControlModule from './components/pc-control/PCControlModule';
 import AutomationModule from './components/automation/AutomationModule';
 import CodingModule from './components/coding/CodingModule';
+import BrowserModule from './components/browser/BrowserModule';
 import { useAppStore } from './store/useAppStore';
 import LoginPage from './components/auth/LoginPage';
 import ModelHub from './components/hub/ModelHub';
@@ -60,7 +61,7 @@ function App() {
       case 'admin': return <AdminModule />;
       case 'pc-control': return <PCControlModule />;
       case 'automation': return <AutomationModule />;
-      case 'browser': return <GenericModule title="Agent Browser" />;
+      case 'browser': return <BrowserModule />;
       case 'coding': return <CodingModule />;
       case 'vps': return <VPSModule />;
       case 'hub': return <ModelHub />;

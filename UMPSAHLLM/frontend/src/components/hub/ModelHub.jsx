@@ -11,23 +11,6 @@ const ModelHub = () => {
   const [progress, setProgress] = useState(0);
 
   const handleDownload = async (model) => {
-    if (model.engine !== 'Local') {
-      // Mock for NAS/Cloud
-      setDownloading(model.id);
-      let p = 0;
-      const interval = setInterval(() => {
-        p += 5;
-        setProgress(p);
-        if (p >= 100) {
-          clearInterval(interval);
-          setDownloaded(model.id);
-          setDownloading(null);
-          setProgress(0);
-        }
-      }, 100);
-      return;
-    }
-
     // Real WebLLM Init
     setDownloading(model.id);
     try {
@@ -108,7 +91,13 @@ const ModelHub = () => {
                 </div>
 
                 <h3 className="text-xl font-bold text-white mb-1">{model.name}</h3>
-                <p className="text-xs font-medium text-slate-500 mb-4">{model.specialty}</p>
+                <p className="text-xs font-medium text-slate-500 mb-2">{model.specialty}</p>
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-2 mb-4">
+                  <p className="text-xs font-bold text-indigo-300 flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {model.role}
+                  </p>
+                </div>
 
                 <div className="mt-auto pt-6 space-y-4">
                   <div className="flex items-center justify-between text-[10px] font-black text-slate-600 uppercase tracking-tighter">

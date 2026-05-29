@@ -33,7 +33,7 @@ const VPSModule = () => {
 
   const fetchVPS = async () => {
     try {
-      const res = await fetch('https://api.umpsahllm.com/api/vps/list', {
+      const res = await fetch('http://localhost:3002/api/vps/list', {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
       const data = await res.json();
@@ -59,7 +59,7 @@ const VPSModule = () => {
 
   const toggleStatus = async (id) => {
     try {
-      await fetch('https://api.umpsahllm.com/api/vps/toggle', {
+      await fetch('http://localhost:3002/api/vps/toggle', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ const VPSModule = () => {
     if (!newVpsName) return;
     setIsCreating(true);
     try {
-      await fetch('https://api.umpsahllm.com/api/vps/create', {
+      await fetch('http://localhost:3002/api/vps/create', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

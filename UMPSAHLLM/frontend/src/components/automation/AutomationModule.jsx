@@ -91,18 +91,15 @@ const AutomationModule = () => {
     console.log("Executing Workflow:", workflow);
     
     try {
-       const response = await fetch('http://localhost:3001/api/chat', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ 
-           message: `Execute this automation workflow: ${JSON.stringify(workflow)}`,
-           model: 'llama3.1:8b' 
-         })
-       });
-       const data = await response.json();
-       alert(`Workflow Execution Started: ${data.response}`);
+       const { localLLMService } = await import('../../services/localLLMService');
+       const responseText = await localLLMService.generate([{ 
+         role: 'user', 
+         content: `Execute this automation workflow: ${JSON.stringify(workflow)}. Analyze the nodes and confirm execution strategy.` 
+       }]);
+       alert(`Workflow Execution Strategy (Local WebGPU):\n\n${responseText}`);
     } catch (err) {
-       alert("Failed to connect to Automation Engine.");
+       console.error(err);
+       alert("Failed to connect to Automation Engine. Ensure a local model is downloaded and selected in the Hub.");
     }
   };
 

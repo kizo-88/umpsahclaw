@@ -4,7 +4,7 @@ const { execFile } = require('child_process');
 const path = require('path');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // Robust manual CORS middleware to ensure preflight OPTIONS and headers work perfectly behind Cloudflare/reverse proxies
 app.use((req, res, next) => {
@@ -48,6 +48,7 @@ if (!fs.existsSync(TRAINING_DATA_DIR)) {
 app.post('/api/log', (req, res) => {
     const { prompt, response, engine, model, userId, timestamp } = req.body;
     
+    // Save to training data
     const logEntry = JSON.stringify({
         prompt,
         response,
@@ -56,16 +57,22 @@ app.post('/api/log', (req, res) => {
         userId,
         timestamp: timestamp || new Date().toISOString()
     }) + '\n';
-
     const logFile = path.join(TRAINING_DATA_DIR, `interactions_${new Date().toISOString().split('T')[0]}.jsonl`);
+    fs.appendFileSync(logFile, logEntry);
+
+    // Save to Vault for RAG
+    const VAULT_DIR = path.resolve(__dirname, 'vault');
+    if (!fs.existsSync(VAULT_DIR)) {
+        fs.mkdirSync(VAULT_DIR, { recursive: true });
+    }
+    if (prompt && response) {
+        const safeTitle = prompt.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
+        const docName = `Memory_${Date.now()}_${safeTitle}.md`;
+        const docContent = `# User Query\n${prompt}\n\n# AI Response\n${response}\n\n*Engine: ${engine} | Model: ${model}*`;
+        fs.writeFileSync(path.join(VAULT_DIR, docName), docContent);
+    }
     
-    fs.appendFile(logFile, logEntry, (err) => {
-        if (err) {
-            console.error('Failed to log interaction:', err);
-            return res.status(500).json({ error: 'Failed to log interaction' });
-        }
-        res.json({ status: 'logged' });
-    });
+    res.json({ status: 'logged' });
 });
 
 // VPS Management System (Phase 5) & Compute Engine (Docker)
@@ -160,8 +167,7 @@ app.post('/api/vps/create', async (req, res) => {
                 Image: image,
                 name: name.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now().toString().slice(-4),
                 HostConfig: {
-                    Memory: 512 * 1024 * 1024, // 512MB RAM Limit
-                    NanoCPUs: 500000000        // 0.5 CPU Limit
+                    Memory: 512 * 1024 * 1024 // 512MB RAM Limit
                 }
             });
             await container.start();
@@ -200,50 +206,271 @@ app.post('/api/cloud-chat', async (req, res) => {
     res.json({ response: assistantMsg });
 });
 
-app.post('/api/chat', (req, res) => {
-  const { message, model, sessionId = 'web-default' } = req.body;
-  
-  if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-  }
+const VAULT_DIR = path.resolve(__dirname, 'vault');
+if (!fs.existsSync(VAULT_DIR)) {
+    fs.mkdirSync(VAULT_DIR, { recursive: true });
+}
 
-  // Map frontend model IDs to Ollama model names
-  const MODEL_MAP = {
-    'llama3.1-8b': 'llama3.1:8b',
-    'phi3-mini': 'phi3:mini',
-    'qwen2.5-7b': 'qwen2.5:7b',
-  };
+function getVaultContext() {
+    let context = "";
+    if (fs.existsSync(VAULT_DIR)) {
+        const files = fs.readdirSync(VAULT_DIR).filter(f => f.endsWith('.md'));
+        // Sort files by modified time, descending (newest first)
+        files.sort((a, b) => fs.statSync(path.join(VAULT_DIR, b)).mtime.getTime() - fs.statSync(path.join(VAULT_DIR, a)).mtime.getTime());
+        // Grab top 3 recent memories
+        const recentFiles = files.slice(0, 3);
+        if (recentFiles.length > 0) {
+            context = "\n\n=== LONG TERM MEMORY (Markdown Vault) ===\nHere is recent context from your Markdown Vault. Use this to inform your answers if relevant:\n";
+            for (const f of recentFiles) {
+                context += `\n--- Document: ${f} ---\n`;
+                context += fs.readFileSync(path.join(VAULT_DIR, f), 'utf-8');
+                context += `\n-----------------------\n`;
+            }
+        }
+    }
+    return context;
+}
 
-  // Use requested model or default to llama3.1:8b
-  const targetModel = MODEL_MAP[model] || model || 'llama3.1:8b';
+// ==========================================
+// PC CONTROL (FILE SYSTEM API)
+// ==========================================
+const WORKSPACE_DIR = path.resolve(__dirname, 'workspace');
+if (!fs.existsSync(WORKSPACE_DIR)) {
+    fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+}
 
-  // Escape quotation marks strictly to prevent CLI injection
-  const safeMessage = message.replace(/"/g, '\\"');
+function getSafePath(targetPath) {
+    const safePath = path.resolve(WORKSPACE_DIR, targetPath || '');
+    if (!safePath.startsWith(WORKSPACE_DIR)) {
+        throw new Error('Path traversal detected.');
+    }
+    return safePath;
+}
 
-  console.log(`Executing PicoClaw task [${targetModel}]: ${safeMessage}`);
-
-  execFile(PICOCLAW_EXE, ['agent', '-m', message, '--model', targetModel, '--session', sessionId], { cwd: path.resolve(__dirname, '../../'), windowsHide: true, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-      if (error) {
-          console.error(`PicoClaw execution error: ${error}`);
-          return res.status(500).json({ response: `[PicoClaw OS Error]: Failed to start agent. Error: ${error.message}` });
-      }
-
-      // Strip the ASCII banner and extra whitespace
-      let finalReply = stdout.replace(/^[\s\S]*╚═╝\s+╚═╝\s+╚══╝╚══╝\s*/, '').trim();
-      
-      // If we failed to strip the banner (e.g. it changed), at least trim it
-      if (!finalReply) finalReply = stdout.trim();
-
-
-      // Ensure we don't send an empty reply if output goes to stderr
-      if (!finalReply && stderr) {
-        finalReply = stderr.trim();
-      }
-
-      res.json({ response: finalReply });
-  });
+app.post('/api/fs/list', (req, res) => {
+    try {
+        const { dirPath = '' } = req.body;
+        const target = getSafePath(dirPath);
+        if (!fs.existsSync(target)) return res.json({ files: [] });
+        
+        const items = fs.readdirSync(target, { withFileTypes: true });
+        const files = items.map(item => ({
+            name: item.name,
+            isDirectory: item.isDirectory(),
+            path: path.join(dirPath, item.name).replace(/\\/g, '/')
+        }));
+        res.json({ files });
+    } catch (e) {
+        res.status(403).json({ error: e.message });
+    }
 });
 
+app.post('/api/fs/read', (req, res) => {
+    try {
+        const { filePath } = req.body;
+        const target = getSafePath(filePath);
+        if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' });
+        
+        const content = fs.readFileSync(target, 'utf-8');
+        res.json({ content });
+    } catch (e) {
+        res.status(403).json({ error: e.message });
+    }
+});
+
+app.post('/api/fs/write', (req, res) => {
+    try {
+        const { filePath, content } = req.body;
+        const target = getSafePath(filePath);
+        
+        // Ensure parent directory exists
+        const dir = path.dirname(target);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        
+        fs.writeFileSync(target, content, 'utf-8');
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(403).json({ error: e.message });
+    }
+});
+
+app.post('/api/fs/delete', (req, res) => {
+    try {
+        const { filePath } = req.body;
+        const target = getSafePath(filePath);
+        if (fs.existsSync(target)) {
+            if (fs.statSync(target).isDirectory()) {
+                fs.rmSync(target, { recursive: true, force: true });
+            } else {
+                fs.unlinkSync(target);
+            }
+        }
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(403).json({ error: e.message });
+    }
+});
+// ==========================================
+
+app.post('/api/rag/search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: "Query is required" });
+  
+  console.log(`Executing RAG Search for: ${query}`);
+  try {
+      const vaultContext = getVaultContext();
+      res.json({ context: vaultContext });
+  } catch (error) {
+      console.error(`RAG Search error: ${error}`);
+      res.status(500).json({ error: 'Failed to retrieve context' });
+  }
+});
+
+// ==========================================
+// AGENT BROWSER (PROXY & SCRAPER API)
+// ==========================================
+const axios = require('axios');
+const cheerio = require('cheerio');
+
+app.post('/api/browse', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ error: 'URL is required' });
+
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+            timeout: 10000
+        });
+
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        // Remove unnecessary elements
+        $('script, style, noscript, iframe, img, svg, video, audio, link, meta, head').remove();
+
+        // Get clean text formatted slightly nicely
+        const cleanText = $('body').text()
+            .replace(/\n\s*\n/g, '\n\n') // Remove excessive empty lines
+            .replace(/[ \t]+/g, ' ')      // Condense spaces
+            .trim();
+
+        res.json({
+            title: $('title').text() || url,
+            text: cleanText,
+            url: url
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+// Global variable to track the last accessed proxy origin for fallback root asset routing
+global.currentProxyOrigin = '';
+
+// Full Proxy Middleware to handle relative assets fetched by JS (e.g. Vite modules)
+app.use((req, res, next) => {
+    // If request is already explicitly going to /proxy/ or /api/, pass it through
+    if (req.path.startsWith('/proxy/') || req.path.startsWith('/api/')) {
+        return next();
+    }
+
+    // Attempt to route based on referer
+    const referer = req.headers.referer;
+    if (referer && referer.includes('/proxy/')) {
+        try {
+            const targetUrlStr = referer.substring(referer.indexOf('/proxy/') + 7);
+            const targetOrigin = new URL(targetUrlStr).origin;
+            return res.redirect('/proxy/' + targetOrigin + req.originalUrl);
+        } catch (e) {}
+    }
+
+    // Fallback: If no referer, and we have an active proxy session, route to the active origin
+    if (global.currentProxyOrigin) {
+        return res.redirect('/proxy/' + global.currentProxyOrigin + req.originalUrl);
+    }
+
+    next();
+});
+
+app.get('/proxy/*', async (req, res) => {
+    try {
+        const targetUrl = req.params[0];
+        if (!targetUrl || !targetUrl.startsWith('http')) return res.status(400).send('Valid URL required');
+
+        const response = await axios.get(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            timeout: 15000,
+            responseType: 'arraybuffer',
+            validateStatus: () => true // Accept all statuses to proxy them faithfully
+        });
+
+        const contentType = response.headers['content-type'];
+        if (contentType) res.set('Content-Type', contentType);
+
+        if (contentType && contentType.includes('text/html')) {
+            global.currentProxyOrigin = new URL(targetUrl).origin;
+            
+            const html = response.data.toString('utf8');
+            const $ = cheerio.load(html);
+            
+            // Remove crossorigin attributes as they trigger strict CORS on our proxy
+            $('[crossorigin]').removeAttr('crossorigin');
+
+            // Rewrite links to route through our proxy explicitly
+            $('[href], [src]').each((_, el) => {
+                const attr = $(el).attr('href') ? 'href' : 'src';
+                const link = $(el).attr(attr);
+                if (link && !link.startsWith('data:') && !link.startsWith('blob:')) {
+                    try {
+                        const absoluteUrl = new URL(link, targetUrl).href;
+                        $(el).attr(attr, '/proxy/' + absoluteUrl);
+                    } catch (e) {}
+                }
+            });
+
+            // Inject Automation Hook Script
+            const hookScript = `
+                <script>
+                    window.addEventListener("message", (event) => {
+                        if (event.data && event.data.type === "AI_ACTION") {
+                            const { action, amount, selector } = event.data;
+                            if (action === "scroll") {
+                                window.scrollBy({ top: amount || 500, behavior: "smooth" });
+                            }
+                            if (action === "click") {
+                                const el = document.querySelector(selector);
+                                if (el) {
+                                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    setTimeout(() => el.click(), 500);
+                                }
+                            }
+                            if (action === "getCoords") {
+                                const el = document.querySelector(selector);
+                                if (el) {
+                                    const rect = el.getBoundingClientRect();
+                                    window.parent.postMessage({
+                                        type: "AI_COORDS_REPLY",
+                                        rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+                                    }, "*");
+                                }
+                            }
+                        }
+                    });
+                </script>
+            `;
+            $('body').append(hookScript);
+
+            return res.send($.html());
+        } else {
+            return res.send(response.data);
+        }
+    } catch (e) {
+        res.status(500).send(`Proxy Error: ${e.message}`);
+    }
+});
 const HOST = '0.0.0.0';
 app.listen(port, HOST, () => {
   console.log(`🚀 UMPSAHLLM Backend running on http://172.17.27.62:${port}`);
