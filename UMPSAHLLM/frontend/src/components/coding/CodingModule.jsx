@@ -200,10 +200,10 @@ I will automatically detect the code block and update the user's local file.`;
   };
 
   return (
-    <div className="h-full flex overflow-hidden bg-slate-950 font-inter">
+    <div className="h-full flex overflow-hidden bg-[#050505] font-inter">
       
       {/* 📁 File Tree Sidebar (Slim) */}
-      <div className="w-14 border-r border-slate-900 flex flex-col items-center py-6 gap-6 bg-slate-950/50 backdrop-blur-3xl shrink-0">
+      <div className="w-14 border-r border-slate-900 flex flex-col items-center py-6 gap-6 bg-[#050505]/50 backdrop-blur-3xl shrink-0">
         <Files className="w-5 h-5 text-indigo-400 cursor-pointer" />
         <Layout className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
         <RefreshCw onClick={fetchFiles} className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors active:rotate-180" />
@@ -213,7 +213,7 @@ I will automatically detect the code block and update the user's local file.`;
       </div>
 
       {/* 📁 Extended File Explorer */}
-      <div className="w-56 border-r border-slate-900 bg-slate-950/40 p-4 flex flex-col overflow-y-auto shrink-0">
+      <div className="w-56 border-r border-slate-900 bg-[#050505]/40 p-4 flex flex-col overflow-y-auto shrink-0">
         <div className="flex items-center justify-between mb-4 px-2">
            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Workspace</span>
            <button onClick={handleCreateFile} className="w-6 h-6 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 flex items-center justify-center transition-colors">
@@ -228,7 +228,7 @@ I will automatically detect the code block and update the user's local file.`;
               className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 text-xs font-bold transition-all ${
                 activeFile === file.path 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-white'
+                  : 'text-slate-400 hover:bg-[#050505] hover:text-white'
               }`}
             >
               {file.isDirectory ? <Folder className="w-4 h-4 text-emerald-400 shrink-0" /> : <FileIcon className="w-4 h-4 text-indigo-400 shrink-0" />}
@@ -243,7 +243,7 @@ I will automatically detect the code block and update the user's local file.`;
 
       {/* 💻 Main Editor Space */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <div className="h-12 border-b border-slate-900 flex items-center px-6 justify-between bg-slate-950/60 transition-all z-10">
+        <div className="h-12 border-b border-slate-900 flex items-center px-6 justify-between bg-[#050505]/60 transition-all z-10">
           <div className="flex items-center gap-6">
              <div className="flex items-center gap-2">
                 <Code2 className="w-4 h-4 text-indigo-400" />
@@ -279,7 +279,7 @@ I will automatically detect the code block and update the user's local file.`;
           )}
         </div>
 
-        <div className="flex-1 bg-slate-950 relative">
+        <div className="flex-1 bg-[#050505] relative">
           {activeFile ? (
              <Editor
                height="100%"
@@ -311,8 +311,8 @@ I will automatically detect the code block and update the user's local file.`;
         </div>
 
         {/* 📟 Terminal Drawer */}
-        <div className="h-40 border-t border-slate-900 bg-slate-950/80 font-mono text-[11px] flex flex-col shadow-2xl relative z-10">
-           <div className="flex items-center gap-2 h-8 px-4 bg-slate-900/50 border-b border-slate-900 text-indigo-400 font-bold opacity-60 shrink-0">
+        <div className="h-40 border-t border-slate-900 bg-[#050505] font-mono text-[11px] flex flex-col shadow-2xl relative z-10">
+           <div className="flex items-center gap-2 h-8 px-4 bg-[#050505]/50 border-b border-slate-900 text-indigo-400 font-bold opacity-60 shrink-0">
               <Terminal className="w-3 h-3" /> AG_DEBUG_CONSOLE_v1
            </div>
            <div className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar text-slate-500">
@@ -329,7 +329,7 @@ I will automatically detect the code block and update the user's local file.`;
       </div>
 
       {/* 🧬 Antigravity-Style AI Sidebar */}
-      <div className="w-96 border-l border-slate-900 flex flex-col bg-slate-950/40 backdrop-blur-2xl relative shadow-[-20px_0px_50px_rgba(0,0,0,0.5)] z-20 overflow-hidden shrink-0">
+      <div className="w-96 border-l border-slate-900 flex flex-col bg-[#050505]/40 backdrop-blur-2xl relative shadow-[-20px_0px_50px_rgba(0,0,0,0.5)] z-20 overflow-hidden shrink-0">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
            <div className="absolute top-[-10%] right-[-10%] w-full h-full bg-indigo-500/5 blur-[80px] rounded-full"></div>
         </div>
@@ -349,9 +349,9 @@ I will automatically detect the code block and update the user's local file.`;
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
            {aiChat.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'assistant' ? 'flex-col' : 'flex-row-reverse'}`}>
-                 <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border ${
+                 <div className={`p-4 rounded-xl text-[13px] leading-relaxed border ${
                     msg.role === 'assistant' 
-                    ? 'bg-slate-900/50 border-slate-800 text-slate-300 rounded-tl-none font-medium' 
+                    ? 'bg-[#050505]/50 border-white/5 text-slate-300 rounded-tl-none font-medium' 
                     : 'bg-indigo-600 border-indigo-500 text-white rounded-tr-none shadow-lg shadow-indigo-600/20'
                  }`}>
                     {msg.loading ? <span className="animate-pulse">Synthesizing...</span> : msg.text}
@@ -362,7 +362,7 @@ I will automatically detect the code block and update the user's local file.`;
         </div>
 
         <div className="p-4 border-t border-slate-900 shrink-0">
-           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-inner">
+           <div className="bg-[#050505]/60 border border-white/5 rounded-xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-inner">
               <input 
                 placeholder="Ask AI to modify this code..." 
                 className="flex-1 bg-transparent text-xs outline-none px-3 py-1 font-medium text-slate-300 placeholder:text-slate-600"

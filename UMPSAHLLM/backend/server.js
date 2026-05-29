@@ -2,9 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const { execFile } = require('child_process');
 const path = require('path');
+const os = require('os');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3002;
 
 // Robust manual CORS middleware to ensure preflight OPTIONS and headers work perfectly behind Cloudflare/reverse proxies
 app.use((req, res, next) => {
@@ -148,6 +149,20 @@ app.post('/api/vps/toggle', async (req, res) => {
     data = data.map(v => v.id === id ? { ...v, status: v.status === 'running' ? 'stopped' : 'running' } : v);
     fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
     res.json({ status: 'updated' });
+});
+
+// Automation Execution Endpoint
+const { exec } = require('child_process');
+app.post('/api/automation/bash', (req, res) => {
+    const { command } = req.body;
+    if (!command) return res.status(400).json({ error: 'No command provided' });
+    
+    exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
+        if (error) {
+            return res.json({ success: false, output: stderr || error.message });
+        }
+        res.json({ success: true, output: stdout || stderr });
+    });
 });
 
 app.post('/api/vps/create', async (req, res) => {
@@ -310,6 +325,66 @@ app.post('/api/fs/delete', (req, res) => {
         res.status(403).json({ error: e.message });
     }
 });
+
+app.post('/api/fs/mkdir', (req, res) => {
+    try {
+        const { filePath } = req.body;
+        const target = getSafePath(filePath);
+        if (!fs.existsSync(target)) {
+            fs.mkdirSync(target, { recursive: true });
+        }
+        res.json({ status: 'success' });
+    } catch (e) {
+        res.status(403).json({ error: e.message });
+    }
+});
+
+app.get('/api/pc/stats', (req, res) => {
+    try {
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+        
+        res.json({
+            cpu: os.cpus(),
+            memory: { total: totalMem, used: usedMem, free: freeMem },
+            uptime: os.uptime(),
+            platform: os.platform(),
+            release: os.release()
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/pc/processes', (req, res) => {
+    const { exec } = require('child_process');
+    exec('tasklist /FO CSV /NH', (error, stdout) => {
+        if (error) return res.status(500).json({ error: error.message });
+        
+        const processes = stdout.split('\n').filter(l => l.trim()).map(line => {
+            const parts = line.split('","');
+            if(parts.length < 5) return null;
+            return {
+                name: parts[0].replace(/"/g, ''),
+                pid: parts[1].replace(/"/g, ''),
+                mem: parts[4].replace(/"/g, '').replace(' K', '').trim()
+            };
+        }).filter(p => p);
+        
+        res.json({ processes });
+    });
+});
+
+app.post('/api/pc/kill', (req, res) => {
+    const { pid } = req.body;
+    const { exec } = require('child_process');
+    exec(`taskkill /PID ${pid} /F`, (error, stdout) => {
+        if (error) return res.status(500).json({ error: error.message });
+        res.json({ status: 'success', output: stdout });
+    });
+});
+
 // ==========================================
 
 app.post('/api/rag/search', async (req, res) => {
@@ -434,6 +509,24 @@ app.get('/proxy/*', async (req, res) => {
             // Inject Automation Hook Script
             const hookScript = `
                 <script>
+                    // Add ripple styles
+                    const style = document.createElement('style');
+                    style.innerHTML = \`
+                        .ai-ripple {
+                            position: absolute;
+                            border-radius: 50%;
+                            background: rgba(99, 102, 241, 0.4);
+                            transform: scale(0);
+                            animation: ai-ripple-anim 600ms linear;
+                            pointer-events: none;
+                            z-index: 999999;
+                        }
+                        @keyframes ai-ripple-anim {
+                            to { transform: scale(4); opacity: 0; }
+                        }
+                    \`;
+                    document.head.appendChild(style);
+
                     window.addEventListener("message", (event) => {
                         if (event.data && event.data.type === "AI_ACTION") {
                             const { action, amount, selector } = event.data;
@@ -444,7 +537,25 @@ app.get('/proxy/*', async (req, res) => {
                                 const el = document.querySelector(selector);
                                 if (el) {
                                     el.scrollIntoView({ behavior: "smooth", block: "center" });
-                                    setTimeout(() => el.click(), 500);
+                                    
+                                    setTimeout(() => {
+                                        const rect = el.getBoundingClientRect();
+                                        const ripple = document.createElement('div');
+                                        ripple.className = 'ai-ripple';
+                                        
+                                        // Center the ripple on the element
+                                        const size = Math.max(rect.width, rect.height);
+                                        ripple.style.width = ripple.style.height = size + 'px';
+                                        ripple.style.left = (rect.left + window.scrollX + rect.width/2 - size/2) + 'px';
+                                        ripple.style.top = (rect.top + window.scrollY + rect.height/2 - size/2) + 'px';
+                                        
+                                        document.body.appendChild(ripple);
+                                        
+                                        setTimeout(() => {
+                                            ripple.remove();
+                                            el.click();
+                                        }, 600);
+                                    }, 500);
                                 }
                             }
                             if (action === "getCoords") {

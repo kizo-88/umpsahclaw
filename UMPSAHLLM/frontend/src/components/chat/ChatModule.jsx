@@ -139,14 +139,14 @@ const ChatModule = () => {
           >
             <div className={`flex gap-4 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                msg.role === 'user' ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-900 border-slate-700'
+                msg.role === 'user' ? 'bg-indigo-600 border-indigo-400' : 'bg-[#050505] border-white/10'
               }`}>
                 {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-indigo-400" />}
               </div>
-              <div className={`p-4 rounded-2xl shadow-sm border ${
+              <div className={`p-4 rounded-xl shadow-sm border ${
                 msg.role === 'user' 
                   ? 'bg-indigo-600 border-indigo-500 text-white rounded-tr-none' 
-                  : 'bg-slate-900/50 border-slate-800 text-slate-200 rounded-tl-none backdrop-blur-md'
+                  : 'bg-[#050505]/50 border-white/5 text-slate-200 rounded-tl-none backdrop-blur-md'
               }`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
               </div>
@@ -155,7 +155,7 @@ const ChatModule = () => {
         ))}
         {isTyping && (
           <div className="flex justify-start">
-             <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex gap-1.5">
+             <div className="bg-[#050505]/50 border border-white/5 p-3 rounded-xl flex gap-1.5">
                 <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></motion.span>
                 <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></motion.span>
                 <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></motion.span>
@@ -165,10 +165,10 @@ const ChatModule = () => {
       </div>
 
       <div className="pt-4">
-        <div className="relative group bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-2xl">
+        <div className="relative group bg-[#050505]/40 backdrop-blur-xl border border-white/5 rounded-xl p-2 flex items-center gap-2 focus-within:border-indigo-500/50 transition-all shadow-2xl">
             <div className="flex items-center gap-2">
               <select 
-                className="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-700 outline-none focus:border-indigo-500/50 transition-all cursor-pointer hover:bg-slate-700"
+                className="bg-slate-800 text-slate-300 text-xs font-semibold px-3 py-2 rounded-lg border border-white/10 outline-none focus:border-indigo-500/50 transition-all cursor-pointer hover:bg-slate-700"
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
               >

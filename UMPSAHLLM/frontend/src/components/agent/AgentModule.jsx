@@ -97,7 +97,7 @@ const AgentModule = () => {
         {/* Header */}
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+            <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shadow-lg shadow-indigo-500/10">
               <Brain className="w-7 h-7 text-indigo-400" />
             </div>
             <div>
@@ -109,7 +109,7 @@ const AgentModule = () => {
              <button 
                 onClick={() => setShowSettings(!showSettings)}
                 className={`p-3 rounded-xl border transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-widest ${
-                   showSettings ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                   showSettings ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-[#050505] border-white/5 text-slate-400 hover:text-white'
                 }`}
              >
                 <Settings2 className="w-4 h-4" /> {showSettings ? 'Close Config' : 'Configure Roles'}
@@ -134,7 +134,7 @@ const AgentModule = () => {
                  initial={{ opacity: 0, y: -20 }}
                  animate={{ opacity: 1, y: 0 }}
                  exit={{ opacity: 0, y: -20 }}
-                 className="shrink-0 bg-slate-900/60 backdrop-blur-3xl border border-indigo-500/20 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-2xl relative"
+                 className="shrink-0 bg-[#050505]/60 backdrop-blur-3xl border border-indigo-500/20 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-2xl relative"
               >
                  <div className="absolute -top-3 left-10 bg-indigo-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-indigo-600/30">
                     Cluster Configuration
@@ -149,7 +149,7 @@ const AgentModule = () => {
                        </div>
                        <div className="relative group">
                           <input 
-                             className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:border-indigo-500/50 transition-all outline-none"
+                             className="w-full bg-[#050505]/50 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-300 focus:border-indigo-500/50 transition-all outline-none"
                              value={model.role}
                              onChange={(e) => updateModelRole(model.id, e.target.value)}
                              placeholder="Set Agent Role..."
@@ -168,7 +168,7 @@ const AgentModule = () => {
         <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 pr-4 custom-scrollbar">
           {discussion.length === 0 && !isDiscussing && (
             <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-               <div className="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-6">
+               <div className="w-20 h-20 rounded-full bg-[#050505] border border-white/5 flex items-center justify-center mb-6">
                   <MessageSquare className="w-10 h-10 text-slate-600" />
                </div>
                <h3 className="text-white font-bold text-lg">No Active Discussion</h3>
@@ -185,15 +185,15 @@ const AgentModule = () => {
                 className={`flex flex-col gap-3 ${msg.role === 'system' ? 'items-center' : ''}`}
               >
                 {msg.role === 'system' ? (
-                  <div className="bg-slate-900/50 border border-slate-800 px-4 py-2 rounded-full flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <div className="bg-[#050505]/50 border border-white/5 px-4 py-2 rounded-full flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     {msg.status === 'loading' && <Loader2 className="w-3 h-3 animate-spin text-indigo-500" />}
                     {msg.text}
                   </div>
                 ) : (
-                  <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 flex flex-col gap-4 shadow-xl">
+                  <div className="bg-[#050505]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 flex flex-col gap-4 shadow-2xl shadow-black/50">
                     <div className="flex items-center justify-between">
                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center ${msg.color}`}>
+                          <div className={`w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center ${msg.color}`}>
                              <Bot className="w-6 h-6" />
                           </div>
                           <div>
@@ -220,7 +220,7 @@ const AgentModule = () => {
             >
                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-500 shadow-lg shadow-indigo-500/40 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-xl bg-indigo-500 shadow-lg shadow-indigo-500/40 flex items-center justify-center">
                      <ShieldCheck className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -249,7 +249,7 @@ const AgentModule = () => {
 
         {/* Input area */}
         <div className="shrink-0 pt-4">
-           <div className="bg-slate-900/60 backdrop-blur-3xl border border-slate-800 rounded-[2.5rem] p-4 flex flex-col gap-4 shadow-2xl focus-within:border-indigo-500/30 transition-all">
+           <div className="bg-[#050505]/60 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-4 flex flex-col gap-4 shadow-2xl focus-within:border-indigo-500/30 transition-all">
               <div className="flex items-center justify-between px-4 pt-2">
                  <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
@@ -257,7 +257,7 @@ const AgentModule = () => {
                  </div>
                  <div className="flex gap-2">
                     {availableModels.map(m => (
-                       <span key={m.id} className="text-[9px] font-black text-slate-600 uppercase tracking-tighter bg-slate-950 px-2 py-0.5 rounded border border-slate-900">{m.role}</span>
+                       <span key={m.id} className="text-[9px] font-black text-slate-600 uppercase tracking-tighter bg-[#050505] px-2 py-0.5 rounded border border-slate-900">{m.role}</span>
                     ))}
                  </div>
               </div>
@@ -274,7 +274,7 @@ const AgentModule = () => {
                 <button
                   onClick={startDiscussion}
                   disabled={isDiscussing || !prompt.trim()}
-                  className="w-16 h-16 rounded-[1.5rem] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white transition-all shadow-xl shadow-indigo-600/20 active:scale-90 shrink-0"
+                  className="w-16 h-16 rounded-[1.5rem] bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white transition-all shadow-2xl shadow-black/50 shadow-indigo-600/20 active:scale-90 shrink-0"
                 >
                   {isDiscussing ? <Loader2 className="w-8 h-8 animate-spin" /> : <Send className="w-8 h-8" />}
                 </button>

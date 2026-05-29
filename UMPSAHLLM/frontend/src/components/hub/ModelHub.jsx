@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { localLLMService } from '../../services/localLLMService';
 
 const ModelHub = () => {
-  const { availableModels, setMode, setDownloaded } = useAppStore();
+  const { availableModels, setMode, setDownloaded, setActiveModelId } = useAppStore();
   const [downloading, setDownloading] = useState(null);
   const [progress, setProgress] = useState(0);
 
@@ -18,6 +18,7 @@ const ModelHub = () => {
         setProgress(Math.round(p * 100));
       });
       setDownloaded(model.id);
+      setActiveModelId(model.id);
     } catch (e) {
       console.error("WebLLM Init Failed", e);
       alert("Local Engine failed to initialize. Ensure your browser supports WebGPU.");
@@ -38,7 +39,7 @@ const ModelHub = () => {
   };
 
   return (
-    <div className="h-full p-12 overflow-y-auto custom-scrollbar bg-slate-950/20">
+    <div className="h-full p-12 overflow-y-auto custom-scrollbar bg-[#050505]/20">
       <div className="max-w-6xl mx-auto">
         <header className="mb-12">
           <motion.h1 
@@ -67,8 +68,8 @@ const ModelHub = () => {
               transition={{ delay: idx * 0.1 }}
               className={`relative group rounded-3xl p-6 border transition-all duration-500 overflow-hidden ${
                 model.downloaded 
-                ? 'bg-slate-900/40 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900/60' 
-                : 'bg-slate-950/40 border-slate-900 grayscale-[0.5] hover:grayscale-0'
+                ? 'bg-[#050505]/40 border-white/5 hover:border-indigo-500/50 hover:bg-[#050505]/60' 
+                : 'bg-[#050505]/40 border-slate-900 grayscale-[0.5] hover:grayscale-0'
               }`}
             >
               {/* Background Glow */}
@@ -78,11 +79,11 @@ const ModelHub = () => {
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-6">
-                  <div className={`p-3 rounded-2xl bg-slate-900 border border-slate-800 text-indigo-400 shadow-xl ${model.color}`}>
+                  <div className={`p-3 rounded-xl bg-[#050505] border border-white/5 text-indigo-400 shadow-2xl shadow-black/50 ${model.color}`}>
                     {getEngineIcon(model.engine)}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-slate-900/80 border border-slate-800 ${
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-[#0a0a0a] border border-white/5 ${
                       model.status === 'online' ? 'text-emerald-400' : 'text-slate-500'
                     }`}>
                       {model.status}
@@ -112,7 +113,7 @@ const ModelHub = () => {
                   {downloading === model.id ? (
                     <div className="space-y-2">
                       <div className="flex justify-between text-[10px] font-black text-indigo-400 uppercase">
-                        <span>Caching Model...</span>
+                        <span>Loading to VRAM...</span>
                         <span>{progress}%</span>
                       </div>
                       <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
@@ -125,19 +126,23 @@ const ModelHub = () => {
                     </div>
                   ) : model.downloaded ? (
                     <button 
-                      onClick={() => setMode('chat')}
+                      onClick={async () => {
+                         setActiveModelId(model.id);
+                         await handleDownload(model);
+                         setMode('chat');
+                      }}
                       className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                     >
                       <Play className="w-3 h-3 fill-current" />
-                      Initialize Session
+                      Initialize Engine
                     </button>
                   ) : (
                     <button 
                       onClick={() => handleDownload(model)}
-                      className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-slate-700"
+                      className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-white/10"
                     >
                       <Download className="w-3 h-3" />
-                      Download to Device
+                      Download to Cache
                     </button>
                   )}
                 </div>
@@ -152,7 +157,7 @@ const ModelHub = () => {
           transition={{ delay: 0.6 }}
           className="mt-16 p-8 rounded-3xl bg-indigo-600/5 border border-indigo-500/10 flex flex-col md:flex-row items-center gap-8"
         >
-          <div className="p-4 rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-600/20">
+          <div className="p-4 rounded-xl bg-indigo-600 shadow-2xl shadow-black/50 shadow-indigo-600/20">
             <Shield className="w-8 h-8 text-white" />
           </div>
           <div>

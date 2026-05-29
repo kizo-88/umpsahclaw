@@ -157,19 +157,19 @@ Do not explain the JSON, just output it if an action is requested. You can also 
   };
 
   return (
-    <div className="h-full flex overflow-hidden bg-slate-950 font-inter text-slate-300">
+    <div className="h-full flex overflow-hidden bg-[#050505] font-inter text-slate-300">
       
       {/* 🌐 Main Browser Viewport */}
       <div className="flex-1 flex flex-col relative overflow-hidden">
         
         {/* URL Bar */}
-        <div className="h-14 border-b border-slate-900 flex items-center px-4 bg-slate-950/80 z-10 gap-4">
+        <div className="h-14 border-b border-slate-900 flex items-center px-4 bg-[#050505] z-10 gap-4">
           <div className="flex items-center gap-2 text-slate-500">
             <Globe className="w-5 h-5 text-sky-400" />
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">Agent Browser</span>
           </div>
 
-          <form onSubmit={handleNavigate} className="flex-1 flex items-center max-w-2xl bg-slate-900/50 border border-slate-800 rounded-full px-4 py-1.5 focus-within:border-sky-500/50 transition-colors shadow-inner">
+          <form onSubmit={handleNavigate} className="flex-1 flex items-center max-w-2xl bg-[#050505]/50 border border-white/5 rounded-full px-4 py-1.5 focus-within:border-sky-500/50 transition-colors shadow-inner">
             <Link className="w-4 h-4 text-slate-500 mr-2" />
             <input 
               type="text" 
@@ -189,9 +189,9 @@ Do not explain the JSON, just output it if an action is requested. You can also 
         </div>
 
         {/* Viewport Content */}
-        <div className="flex-1 bg-slate-900/20 relative overflow-hidden">
+        <div className="flex-1 bg-[#050505]/20 relative overflow-hidden">
           {pageData.loading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-50 animate-pulse bg-slate-950/50 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-50 animate-pulse bg-[#050505]/50 z-10">
               <Globe className="w-12 h-12 mb-4 text-sky-400" />
               <p className="font-bold text-sm text-sky-400 uppercase tracking-widest">Fetching Web Content...</p>
             </div>
@@ -241,7 +241,7 @@ Do not explain the JSON, just output it if an action is requested. You can also 
       </div>
 
       {/* 🧬 Agent Copilot Sidebar */}
-      <div className="w-96 border-l border-slate-900 flex flex-col bg-slate-950/40 backdrop-blur-2xl relative shadow-[-20px_0px_50px_rgba(0,0,0,0.5)] z-20 overflow-hidden shrink-0">
+      <div className="w-96 border-l border-slate-900 flex flex-col bg-[#050505]/40 backdrop-blur-2xl relative shadow-[-20px_0px_50px_rgba(0,0,0,0.5)] z-20 overflow-hidden shrink-0">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
            <div className="absolute top-[-10%] right-[-10%] w-full h-full bg-sky-500/5 blur-[80px] rounded-full"></div>
         </div>
@@ -261,9 +261,9 @@ Do not explain the JSON, just output it if an action is requested. You can also 
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
            {aiChat.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'assistant' ? 'flex-col' : 'flex-row-reverse'}`}>
-                 <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border ${
+                 <div className={`p-4 rounded-xl text-[13px] leading-relaxed border ${
                     msg.role === 'assistant' 
-                    ? 'bg-slate-900/50 border-slate-800 text-slate-300 rounded-tl-none font-medium whitespace-pre-wrap' 
+                    ? 'bg-[#050505]/50 border-white/5 text-slate-300 rounded-tl-none font-medium whitespace-pre-wrap' 
                     : 'bg-sky-600 border-sky-500 text-white rounded-tr-none shadow-lg shadow-sky-600/20'
                  }`}>
                     {msg.loading ? <span className="animate-pulse">Analyzing page context...</span> : msg.text}
@@ -274,7 +274,7 @@ Do not explain the JSON, just output it if an action is requested. You can also 
         </div>
 
         <div className="p-4 border-t border-slate-900 shrink-0">
-           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-2 flex items-center gap-2 focus-within:border-sky-500/50 transition-all shadow-inner">
+           <div className="bg-[#050505]/60 border border-white/5 rounded-xl p-2 flex items-center gap-2 focus-within:border-sky-500/50 transition-all shadow-inner">
               <input 
                 placeholder="Command AI (e.g., 'scroll down', 'click login')..." 
                 className="flex-1 bg-transparent text-xs outline-none px-3 py-1 font-medium text-slate-300 placeholder:text-slate-600"

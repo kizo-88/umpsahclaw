@@ -16,6 +16,7 @@ import VPSModule from './components/vps/VPSModule';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
+import { localLLMService } from './services/localLLMService';
 
 const GenericModule = ({ title }) => (
   <div className="h-full flex items-center justify-center p-20 flex-col gap-4">
@@ -29,8 +30,10 @@ const GenericModule = ({ title }) => (
   </div>
 );
 
+import DarkVeil from './components/ui/DarkVeil';
+
 function App() {
-  const { mode } = useAppStore();
+  const { mode, activeModelId } = useAppStore();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,6 +44,14 @@ function App() {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (activeModelId) {
+      localLLMService.init(activeModelId, (p) => {
+        console.log(`Auto-loading engine from cache: ${Math.round(p * 100)}%`);
+      }).catch(e => console.error("Auto-load failed", e));
+    }
+  }, [activeModelId]);
 
   if (loading) {
     return (
@@ -70,12 +81,17 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-hidden selection:bg-indigo-500/30">
-      {/* Absolute Background Mesh FX */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[150px] rounded-full animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/10 blur-[150px] rounded-full"></div>
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")" }}></div>
+    <div className="flex h-screen w-full bg-black text-slate-100 font-sans overflow-hidden selection:bg-indigo-500/30">
+      {/* Absolute Background WebGL FX */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <DarkVeil
+          hueShift={220}
+          noiseIntensity={0.06}
+          scanlineIntensity={0.1}
+          speed={0.15}
+          scanlineFrequency={800}
+          warpAmount={0.05}
+        />
       </div>
 
       <Sidebar />

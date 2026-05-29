@@ -11,21 +11,32 @@ class LocalLLMService {
     if (this.currentModelId === modelId && this.engine) {
       return this.engine;
     }
+    
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
     this.onProgress = onProgress;
     this.currentModelId = modelId;
 
     // Create a new engine
-    this.engine = await webllm.CreateMLCEngine(modelId, {
+    this.initPromise = webllm.CreateMLCEngine(modelId, {
       initProgressCallback: (report) => {
         if (this.onProgress) {
           this.onProgress(report.progress);
         }
         console.log("Model Load Progress:", report.text);
       },
+    }).then(engine => {
+      this.engine = engine;
+      this.initPromise = null;
+      return engine;
+    }).catch(err => {
+      this.initPromise = null;
+      throw err;
     });
 
-    return this.engine;
+    return this.initPromise;
   }
 
   async generate(messages) {

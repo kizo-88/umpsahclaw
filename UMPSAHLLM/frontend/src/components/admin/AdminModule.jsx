@@ -23,14 +23,14 @@ const AdminModule = () => {
           <p className="text-slate-500 font-medium">UMPT.MY Infrastructure Management</p>
         </div>
         <div className="flex gap-2">
-           <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-indigo-600' : 'bg-slate-900 border border-slate-800'}`}>USER ACCESS</button>
-           <button onClick={() => setActiveTab('health')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'health' ? 'bg-indigo-600' : 'bg-slate-900 border border-slate-800'}`}>AI HEALTH</button>
+           <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-indigo-600' : 'bg-[#050505] border border-white/5'}`}>USER ACCESS</button>
+           <button onClick={() => setActiveTab('health')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'health' ? 'bg-indigo-600' : 'bg-[#050505] border border-white/5'}`}>AI HEALTH</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
         {activeTab === 'users' ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 backdrop-blur-md">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-[#050505]/40 border border-white/5 rounded-3xl p-8 backdrop-blur-md">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-lg font-bold">Authorized Staff (@umpsaholdings.my)</h3>
               <button className="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 hover:bg-emerald-500 transition-all active:scale-95 shadow-lg shadow-emerald-500/10">
@@ -39,7 +39,7 @@ const AdminModule = () => {
             </div>
             <table className="w-full text-left">
               <thead>
-                <tr className="text-slate-500 text-[10px] font-black tracking-widest uppercase border-b border-slate-800">
+                <tr className="text-slate-500 text-[10px] font-black tracking-widest uppercase border-b border-white/5">
                   <th className="pb-4">Email</th>
                   <th className="pb-4 text-center">Permissions</th>
                   <th className="pb-4 text-center">Status</th>
@@ -48,7 +48,7 @@ const AdminModule = () => {
               </thead>
               <tbody>
                 {users.map(u => (
-                  <tr key={u.id} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors group">
+                  <tr key={u.id} className="border-b border-white/5/50 hover:bg-slate-800/20 transition-colors group">
                     <td className="py-4 font-mono text-sm text-indigo-300 font-bold">{u.email}</td>
                     <td className="py-4 flex justify-center gap-2">
                       {u.roles.map(r => <span key={r} className="text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-2.5 py-1 rounded-lg font-black">{r}</span>)}
@@ -73,7 +73,7 @@ const AdminModule = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
              {services.map(s => (
-               <motion.div key={s.name} whileHover={{ y: -5 }} className="bg-slate-900/40 border border-slate-800 p-6 rounded-3xl backdrop-blur-md">
+               <motion.div key={s.name} whileHover={{ y: -5 }} className="bg-[#050505]/40 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
                  <div className="flex justify-between items-start mb-6">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{s.name}</h4>
                     <div className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md text-[9px] font-black border border-emerald-500/20 shadow-sm uppercase tracking-tighter">Healthy</div>
@@ -87,7 +87,7 @@ const AdminModule = () => {
                        <span className="text-slate-500">Resource:</span>
                        <span className="text-indigo-400 font-mono">{s.vram}</span>
                     </div>
-                    <div className="w-full bg-slate-950/50 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div className="w-full bg-[#050505]/50 h-2 rounded-full overflow-hidden border border-white/5">
                        <motion.div 
                           initial={{ width: 0 }} 
                           animate={{ width: s.name.includes('Ollama') ? '35%' : '100%' }} 
@@ -100,7 +100,7 @@ const AdminModule = () => {
 
              <div className="lg:col-span-3 bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[2rem] shadow-2xl">
                 <div className="flex items-center gap-4 mb-8">
-                   <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/5">
+                   <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/30 shadow-lg shadow-indigo-500/5">
                       <Cpu className="text-indigo-400 w-8 h-8" />
                    </div>
                    <div>
@@ -109,19 +109,19 @@ const AdminModule = () => {
                    </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                   <div className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                   <div className="p-5 bg-[#050505]/60 rounded-xl border border-white/5">
                       <p className="text-[9px] font-black text-slate-500 uppercase mb-2">Model</p>
                       <p className="text-sm font-black text-indigo-300">LLAMA3:8B</p>
                    </div>
-                   <div className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                   <div className="p-5 bg-[#050505]/60 rounded-xl border border-white/5">
                       <p className="text-[9px] font-black text-slate-500 uppercase mb-2">Temp</p>
                       <p className="text-sm font-black text-emerald-400">54°C</p>
                    </div>
-                   <div className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                   <div className="p-5 bg-[#050505]/60 rounded-xl border border-white/5">
                       <p className="text-[9px] font-black text-slate-500 uppercase mb-2">Uptime</p>
                       <p className="text-sm font-black text-white">99.98%</p>
                    </div>
-                   <div className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800">
+                   <div className="p-5 bg-[#050505]/60 rounded-xl border border-white/5">
                       <p className="text-[9px] font-black text-slate-500 uppercase mb-2">Engines</p>
                       <p className="text-sm font-black text-slate-300">OLLAMA / GW</p>
                    </div>

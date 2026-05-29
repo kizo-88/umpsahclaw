@@ -99,7 +99,7 @@ const VPSModule = () => {
 
 
   return (
-    <div className="h-full p-8 flex flex-col gap-8 bg-slate-950/20">
+    <div className="h-full p-8 flex flex-col gap-8 bg-[#050505]/20">
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
@@ -113,7 +113,7 @@ const VPSModule = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             key={stat.label}
-            className="bg-slate-900/40 border border-slate-800 p-5 rounded-3xl backdrop-blur-xl"
+            className="bg-[#050505]/40 border border-white/5 p-5 rounded-3xl backdrop-blur-xl"
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{stat.label}</span>
@@ -134,14 +134,14 @@ const VPSModule = () => {
               <input 
                 type="text" 
                 placeholder="Search NAS Instances..." 
-                className="w-full bg-slate-900/40 border border-slate-800 rounded-2xl py-3 pl-12 pr-4 text-sm focus:border-indigo-500/50 outline-none transition-all"
+                className="w-full bg-[#050505]/40 border border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm focus:border-indigo-500/50 outline-none transition-all"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
             <button 
               onClick={() => setShowCreateModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-indigo-600/20"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-2xl shadow-black/50 shadow-indigo-600/20"
             >
               <Plus className="w-4 h-4" />
               Provision New VPS
@@ -161,7 +161,7 @@ const VPSModule = () => {
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
-                  className="bg-slate-900 border border-slate-800 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+                  className="bg-[#050505] border border-white/5 p-8 rounded-3xl w-full max-w-md shadow-2xl"
                 >
                   <h2 className="text-xl font-black text-white mb-6">Provision Compute Instance</h2>
                   
@@ -173,7 +173,7 @@ const VPSModule = () => {
                         placeholder="e.g. Analytics Engine" 
                         value={newVpsName}
                         onChange={e => setNewVpsName(e.target.value)}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all"
+                        className="w-full bg-[#050505]/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
                     <div>
@@ -181,7 +181,7 @@ const VPSModule = () => {
                       <select 
                         value={newVpsImage}
                         onChange={e => setNewVpsImage(e.target.value)}
-                        className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all appearance-none"
+                        className="w-full bg-[#050505]/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all appearance-none"
                       >
                         <option value="nginx:alpine">Web Server (Nginx Alpine)</option>
                         <option value="node:18-alpine">Node.js 18 Microservice</option>
@@ -196,7 +196,7 @@ const VPSModule = () => {
                   <div className="flex gap-3">
                     <button 
                       onClick={() => setShowCreateModal(false)}
-                      className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                      className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
                     >
                       Cancel
                     </button>
@@ -225,15 +225,15 @@ const VPSModule = () => {
                   exit={{ opacity: 0, x: 20 }}
                   key={vps.id}
                   onClick={() => setSelectedVps(vps)}
-                  className={`group p-4 rounded-2xl border transition-all cursor-pointer ${
+                  className={`group p-4 rounded-xl border transition-all cursor-pointer ${
                     selectedVps?.id === vps.id 
                     ? 'bg-indigo-600/10 border-indigo-500/50 shadow-lg shadow-indigo-500/5' 
-                    : 'bg-slate-900/40 border-slate-800/50 hover:border-slate-700 hover:bg-slate-900/60'
+                    : 'bg-[#050505]/40 border-white/5/50 hover:border-white/10 hover:bg-[#050505]/60'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
-                      vps.status === 'running' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'
+                      vps.status === 'running' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800 border-white/10 text-slate-500'
                     }`}>
                       <Server className="w-6 h-6" />
                     </div>
@@ -280,7 +280,7 @@ const VPSModule = () => {
 
         {/* VPS Detail / Terminal Sidebar */}
         <div className="hidden lg:flex w-1/3 flex-col gap-4">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 flex flex-col h-full backdrop-blur-2xl overflow-hidden">
+          <div className="bg-[#050505]/60 border border-white/5 rounded-3xl p-6 flex flex-col h-full backdrop-blur-2xl overflow-hidden">
             {selectedVps ? (
               <>
                 <div className="flex items-center justify-between mb-8">
@@ -294,29 +294,29 @@ const VPSModule = () => {
                 <div className="space-y-6 flex-1">
                   <div className="flex flex-col gap-1">
                     <span className="text-[9px] font-black text-slate-600 uppercase">Internal Endpoint</span>
-                    <p className="text-xs font-mono text-indigo-400 bg-slate-950/50 p-2 rounded-lg border border-slate-800/50">http://{selectedVps.ip}:3000</p>
+                    <p className="text-xs font-mono text-indigo-400 bg-[#050505]/50 p-2 rounded-lg border border-white/5/50">http://{selectedVps.ip}:3000</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-800/50">
+                    <div className="p-4 rounded-xl bg-[#050505]/40 border border-white/5/50">
                       <Cpu className="w-4 h-4 text-indigo-500 mb-2" />
                       <p className="text-[9px] font-black text-slate-600 uppercase mb-1">CPU Load</p>
                       <p className="text-sm font-bold text-white">{selectedVps.cpu}</p>
                     </div>
-                    <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-800/50">
+                    <div className="p-4 rounded-xl bg-[#050505]/40 border border-white/5/50">
                       <Database className="w-4 h-4 text-emerald-500 mb-2" />
                       <p className="text-[9px] font-black text-slate-600 uppercase mb-1">Mem Used</p>
                       <p className="text-sm font-bold text-white">{selectedVps.ram.split(' / ')[0]}</p>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-800">
+                  <div className="pt-4 border-t border-white/5">
                     <p className="text-[10px] font-black text-slate-600 uppercase mb-4 tracking-widest">Control Panel</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-slate-700 active:scale-95">
+                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-white/10 active:scale-95">
                         <RotateCcw className="w-3 h-3" /> Soft Reboot
                       </button>
-                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-slate-700 active:scale-95">
+                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-white/10 active:scale-95">
                         <Terminal className="w-3 h-3" /> Console
                       </button>
                       <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-red-950/20 border border-red-900/50 hover:bg-red-900/30 text-red-400 text-xs font-bold transition-all active:scale-95 col-span-2">
@@ -326,7 +326,7 @@ const VPSModule = () => {
                   </div>
                 </div>
 
-                <div className="mt-8 p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center gap-3">
+                <div className="mt-8 p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center gap-3">
                   <Shield className="w-5 h-5 text-indigo-500" />
                   <p className="text-[10px] font-bold text-indigo-400 leading-tight">This VPS is isolated in the UMPSAH NAS sandbox. Port 3000-4000 are open for internal traffic.</p>
                 </div>

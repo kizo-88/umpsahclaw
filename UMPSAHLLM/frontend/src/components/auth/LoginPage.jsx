@@ -44,14 +44,14 @@ const LoginPage = () => {
         className="w-full max-w-md z-10"
       >
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-500/20 mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-500/20 mb-6">
             <Bot className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-white tracking-tight mb-2">UMPSAH<span className="text-indigo-500">LLM</span></h1>
           <p className="text-slate-400 font-medium">Enterprise AI OS · Private & Secure</p>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-2xl border border-slate-800 p-8 rounded-3xl shadow-2xl">
+        <div className="bg-[#050505]/50 backdrop-blur-2xl border border-white/5 p-8 rounded-3xl shadow-2xl">
           <form onSubmit={handleEmailAuth} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Email Address</label>
@@ -61,7 +61,7 @@ const LoginPage = () => {
                   type="email"
                   required
                   autoComplete="email"
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                  className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                   placeholder="admin@umpsaholdings.my"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -77,7 +77,7 @@ const LoginPage = () => {
                   type="password"
                   required
                   autoComplete="current-password"
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                  className="w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -98,7 +98,7 @@ const LoginPage = () => {
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-800"></div>
+              <div className="w-full border-t border-white/5"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-[#0f172a] px-3 text-slate-500 font-bold tracking-widest">Or continue with</span>
