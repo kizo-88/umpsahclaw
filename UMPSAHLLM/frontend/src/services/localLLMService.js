@@ -1,4 +1,5 @@
 import * as webllm from "@mlc-ai/web-llm";
+import { TokenJuice } from "../utils/TokenJuice";
 
 class LocalLLMService {
   constructor() {
@@ -44,11 +45,15 @@ class LocalLLMService {
       throw new Error("Engine not initialized. Please load a model first.");
     }
 
+    const formattedMessages = messages.map(m => ({
+      role: m.role,
+      content: m.text || m.content
+    }));
+
+    const compressedMessages = TokenJuice.compress(formattedMessages);
+
     const reply = await this.engine.chat.completions.create({
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.text || m.content
-      }))
+      messages: compressedMessages
     });
 
     return reply.choices[0].message.content;
@@ -59,11 +64,15 @@ class LocalLLMService {
       throw new Error("Engine not initialized.");
     }
 
+    const formattedMessages = messages.map(m => ({
+      role: m.role,
+      content: m.text || m.content
+    }));
+
+    const compressedMessages = TokenJuice.compress(formattedMessages);
+
     const chunks = await this.engine.chat.completions.create({
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.text || m.content
-      })),
+      messages: compressedMessages,
       stream: true,
     });
 

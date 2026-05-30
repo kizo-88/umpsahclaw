@@ -1,347 +1,228 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Server, Plus, Terminal, Play, Square, Trash2, HardDrive, UploadCloud, FileCode2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Server, 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Terminal, 
-  Activity, 
-  Database, 
-  Cpu, 
-  HardDrive, 
-  Play, 
-  Square, 
-  RotateCcw, 
-  Trash2, 
-  ExternalLink,
-  Shield,
-  Zap
-} from 'lucide-react';
 
-const VPSModule = () => {
-  const [vpsList, setVpsList] = useState([]);
-  const [search, setSearch] = useState('');
-  const [selectedVps, setSelectedVps] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Mock initial VPS instances
+const INITIAL_VPS = [
+  { id: 'vps-1', name: 'Production Node Alpha', ip: '192.168.1.100', status: 'running', os: 'Ubuntu 22.04 LTS', files: ['deploy.sh', 'server.js'] },
+  { id: 'vps-2', name: 'Agent Sandbox', ip: '192.168.1.105', status: 'stopped', os: 'Debian 11', files: [] }
+];
 
-  // Provisioning Modal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
+export default function VPSModule() {
+  const [instances, setInstances] = useState(INITIAL_VPS);
+  const [selectedInstance, setSelectedInstance] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [newVpsName, setNewVpsName] = useState('');
-  const [newVpsImage, setNewVpsImage] = useState('nginx:alpine');
-  const [isCreating, setIsCreating] = useState(false);
 
-  const fetchVPS = async () => {
-    try {
-      const res = await fetch('http://localhost:3002/api/vps/list', {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
-      });
-      const data = await res.json();
-      setVpsList(data);
-      if (selectedVps) {
-        const updated = data.find(v => v.id === selectedVps.id);
-        setSelectedVps(updated);
-      }
-    } catch (e) {
-      console.error("Failed to fetch VPS", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchVPS();
-    const interval = setInterval(fetchVPS, 5000);
-    return () => clearInterval(interval);
-  }, [selectedVps]);
-
-  const filteredVps = vpsList.filter(v => v.name.toLowerCase().includes(search.toLowerCase()));
-
-  const toggleStatus = async (id) => {
-    try {
-      await fetch('http://localhost:3002/api/vps/toggle', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({ id })
-      });
-      fetchVPS();
-    } catch (e) {
-      console.error("Toggle failed", e);
-    }
-  };
-
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!newVpsName) return;
-    setIsCreating(true);
-    try {
-      await fetch('http://localhost:3002/api/vps/create', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({ name: newVpsName, image: newVpsImage })
-      });
-      setShowCreateModal(false);
-      setNewVpsName('');
-      setNewVpsImage('nginx:alpine');
-      fetchVPS(); // Refresh list to show new VPS
-    } catch (e) {
-      console.error("Failed to provision", e);
-      alert("Provisioning failed. Check NAS logs.");
-    } finally {
-      setIsCreating(false);
-    }
+    const newInstance = {
+      id: `vps-${Date.now()}`,
+      name: newVpsName,
+      ip: `10.0.0.${Math.floor(Math.random() * 255)}`,
+      status: 'stopped',
+      os: 'Ubuntu 22.04 LTS',
+      files: []
+    };
+    setInstances([...instances, newInstance]);
+    setNewVpsName('');
+    setShowCreate(false);
   };
 
+  const handleDelete = (id) => {
+    setInstances(instances.filter(i => i.id !== id));
+    if (selectedInstance?.id === id) setSelectedInstance(null);
+  };
+
+  const handleToggleStatus = (id) => {
+    setInstances(instances.map(i => {
+      if (i.id === id) {
+        return { ...i, status: i.status === 'running' ? 'stopped' : 'running' };
+      }
+      return i;
+    }));
+  };
+
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
+
+  const handleFileUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('instanceId', selectedInstance.id);
+
+    try {
+      const response = await fetch('http://localhost:3002/api/vps/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setInstances(instances.map(i => {
+          if (i.id === selectedInstance.id) {
+            // Check if file already exists in UI array
+            if (i.files.includes(data.filename)) return i;
+            const updated = { ...i, files: [...i.files, data.filename] };
+            setSelectedInstance(updated); // Update selected view
+            return updated;
+          }
+          return i;
+        }));
+      } else {
+        alert("Upload failed: " + data.error);
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      alert('Upload failed. Backend might be down.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
-    <div className="h-full p-8 flex flex-col gap-8 bg-[#050505]/20">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Instances', value: vpsList.length, icon: Server, color: 'text-indigo-400' },
-          { label: 'Active Memory', value: '1.6 GB', icon: Activity, color: 'text-emerald-400' },
-          { label: 'CPU Cluster Load', value: '14%', icon: Cpu, color: 'text-amber-400' },
-          { label: 'NAS Storage', value: '42.8 GB', icon: HardDrive, color: 'text-purple-400' },
-        ].map((stat, i) => (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            key={stat.label}
-            className="bg-[#050505]/40 border border-white/5 p-5 rounded-3xl backdrop-blur-xl"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{stat.label}</span>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
+    <div className="h-full flex p-8 gap-8 max-w-7xl mx-auto w-full">
+      {/* Sidebar List */}
+      <div className="w-1/3 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center">
+              <Server className="w-6 h-6 text-rose-400" />
             </div>
-            <p className="text-2xl font-black text-white">{stat.value}</p>
+            <div>
+              <h2 className="text-xl font-black text-white uppercase">Compute VPS</h2>
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Instance Manager</p>
+            </div>
+          </div>
+          <button onClick={() => setShowCreate(true)} className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-white transition-colors">
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+
+        {showCreate && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex gap-2">
+            <input 
+              type="text" 
+              placeholder="Instance Name..." 
+              value={newVpsName}
+              onChange={(e) => setNewVpsName(e.target.value)}
+              className="flex-1 bg-black/50 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+            />
+            <button onClick={handleCreate} className="px-4 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white uppercase tracking-wider">Create</button>
           </motion.div>
-        ))}
+        )}
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-2">
+          {instances.map(inst => (
+            <div 
+              key={inst.id} 
+              onClick={() => setSelectedInstance(inst)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${selectedInstance?.id === inst.id ? 'bg-indigo-900/20 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-[#050505] border-white/5 hover:border-white/20'}`}
+            >
+              <div>
+                <h3 className="text-white font-bold">{inst.name}</h3>
+                <p className="text-slate-500 text-xs font-mono mt-1">{inst.ip}</p>
+              </div>
+              <div className={`w-3 h-3 rounded-full shadow-lg ${inst.status === 'running' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-rose-500 shadow-rose-500/50'}`}></div>
+            </div>
+          ))}
+          {instances.length === 0 && <p className="text-slate-600 text-sm text-center mt-10">No instances found.</p>}
+        </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex gap-8 min-h-0">
-        {/* VPS List */}
-        <div className="w-full lg:w-2/3 flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-4 mb-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Search NAS Instances..." 
-                className="w-full bg-[#050505]/40 border border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm focus:border-indigo-500/50 outline-none transition-all"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <button 
-              onClick={() => setShowCreateModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-2xl shadow-black/50 shadow-indigo-600/20"
-            >
-              <Plus className="w-4 h-4" />
-              Provision New VPS
-            </button>
+      {/* Main Detail View */}
+      <div className="flex-1 bg-[#050505]/60 backdrop-blur-3xl border border-white/5 rounded-3xl p-8 relative overflow-hidden shadow-2xl flex flex-col">
+        {!selectedInstance ? (
+          <div className="m-auto text-center opacity-50 flex flex-col items-center">
+            <HardDrive className="w-20 h-20 text-slate-600 mb-6" />
+            <h3 className="text-2xl font-black text-white uppercase tracking-tight">No Instance Selected</h3>
+            <p className="text-slate-400 mt-2">Select a VPS from the left to manage it.</p>
           </div>
-
-          {/* Create VPS Modal */}
-          <AnimatePresence>
-            {showCreateModal && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-              >
-                <motion.div 
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  className="bg-[#050505] border border-white/5 p-8 rounded-3xl w-full max-w-md shadow-2xl"
-                >
-                  <h2 className="text-xl font-black text-white mb-6">Provision Compute Instance</h2>
-                  
-                  <div className="space-y-4 mb-8">
-                    <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Instance Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Analytics Engine" 
-                        value={newVpsName}
-                        onChange={e => setNewVpsName(e.target.value)}
-                        className="w-full bg-[#050505]/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 tracking-widest">Base Image</label>
-                      <select 
-                        value={newVpsImage}
-                        onChange={e => setNewVpsImage(e.target.value)}
-                        className="w-full bg-[#050505]/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none transition-all appearance-none"
-                      >
-                        <option value="nginx:alpine">Web Server (Nginx Alpine)</option>
-                        <option value="node:18-alpine">Node.js 18 Microservice</option>
-                        <option value="python:3.10-slim">Python 3.10 Data Worker</option>
-                      </select>
-                    </div>
-                    <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                      <p className="text-[10px] font-bold text-indigo-400">Instances are automatically limited to 0.5 CPU cores and 512MB RAM via Docker Engine.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setShowCreateModal(false)}
-                      className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={handleCreate}
-                      disabled={isCreating || !newVpsName}
-                      className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                    >
-                      {isCreating ? <Zap className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />}
-                      {isCreating ? 'Deploying...' : 'Deploy'}
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
-            <AnimatePresence mode="popLayout">
-              {filteredVps.map((vps) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  key={vps.id}
-                  onClick={() => setSelectedVps(vps)}
-                  className={`group p-4 rounded-xl border transition-all cursor-pointer ${
-                    selectedVps?.id === vps.id 
-                    ? 'bg-indigo-600/10 border-indigo-500/50 shadow-lg shadow-indigo-500/5' 
-                    : 'bg-[#050505]/40 border-white/5/50 hover:border-white/10 hover:bg-[#050505]/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
-                      vps.status === 'running' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800 border-white/10 text-slate-500'
-                    }`}>
-                      <Server className="w-6 h-6" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        {vps.name}
-                        <span className="text-[9px] font-black uppercase bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 tracking-tighter">{vps.type}</span>
-                      </h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] text-slate-500 font-mono">{vps.ip}</span>
-                        <span className="text-[10px] text-slate-600 tracking-tighter uppercase font-black italic">{vps.uptime} UPTIME</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 pr-4">
-                      <div className="hidden md:block">
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 text-right">CPU Usage</p>
-                        <div className="w-20 bg-slate-800 h-1 rounded-full overflow-hidden">
-                          <div className="bg-indigo-500 h-full" style={{ width: vps.cpu }}></div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {vps.status === 'running' ? (
-                          <button onClick={(e) => { e.stopPropagation(); toggleStatus(vps.id); }} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">
-                            <Square className="w-4 h-4 fill-current" />
-                          </button>
-                        ) : (
-                          <button onClick={(e) => { e.stopPropagation(); toggleStatus(vps.id); }} className="p-2 rounded-lg hover:bg-emerald-500/10 text-emerald-400 transition-colors">
-                            <Play className="w-4 h-4 fill-current" />
-                          </button>
-                        )}
-                        <button className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* VPS Detail / Terminal Sidebar */}
-        <div className="hidden lg:flex w-1/3 flex-col gap-4">
-          <div className="bg-[#050505]/60 border border-white/5 rounded-3xl p-6 flex flex-col h-full backdrop-blur-2xl overflow-hidden">
-            {selectedVps ? (
-              <>
-                <div className="flex items-center justify-between mb-8">
-                  <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Instance Details</h4>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${selectedVps.status === 'running' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                    <span className="text-[10px] font-black uppercase text-white">{selectedVps.status}</span>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div key={selectedInstance.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-white/10 pb-6 mb-6">
+                <div>
+                  <h2 className="text-3xl font-black text-white tracking-tight">{selectedInstance.name}</h2>
+                  <div className="flex gap-4 mt-2">
+                    <span className="text-slate-400 text-sm font-mono bg-white/5 px-2 py-1 rounded">{selectedInstance.ip}</span>
+                    <span className="text-slate-400 text-sm font-mono bg-white/5 px-2 py-1 rounded">{selectedInstance.os}</span>
                   </div>
                 </div>
-
-                <div className="space-y-6 flex-1">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black text-slate-600 uppercase">Internal Endpoint</span>
-                    <p className="text-xs font-mono text-indigo-400 bg-[#050505]/50 p-2 rounded-lg border border-white/5/50">http://{selectedVps.ip}:3000</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-[#050505]/40 border border-white/5/50">
-                      <Cpu className="w-4 h-4 text-indigo-500 mb-2" />
-                      <p className="text-[9px] font-black text-slate-600 uppercase mb-1">CPU Load</p>
-                      <p className="text-sm font-bold text-white">{selectedVps.cpu}</p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-[#050505]/40 border border-white/5/50">
-                      <Database className="w-4 h-4 text-emerald-500 mb-2" />
-                      <p className="text-[9px] font-black text-slate-600 uppercase mb-1">Mem Used</p>
-                      <p className="text-sm font-bold text-white">{selectedVps.ram.split(' / ')[0]}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/5">
-                    <p className="text-[10px] font-black text-slate-600 uppercase mb-4 tracking-widest">Control Panel</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-white/10 active:scale-95">
-                        <RotateCcw className="w-3 h-3" /> Soft Reboot
-                      </button>
-                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold transition-all border border-white/10 active:scale-95">
-                        <Terminal className="w-3 h-3" /> Console
-                      </button>
-                      <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-red-950/20 border border-red-900/50 hover:bg-red-900/30 text-red-400 text-xs font-bold transition-all active:scale-95 col-span-2">
-                        <Trash2 className="w-3 h-3" /> Terminate Instance
-                      </button>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => handleToggleStatus(selectedInstance.id)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${selectedInstance.status === 'running' ? 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'}`}
+                  >
+                    {selectedInstance.status === 'running' ? <><Square className="w-4 h-4" /> Stop</> : <><Play className="w-4 h-4" /> Start</>}
+                  </button>
+                  <button onClick={() => handleDelete(selectedInstance.id)} className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-colors">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
-
-                <div className="mt-8 p-4 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-indigo-500" />
-                  <p className="text-[10px] font-bold text-indigo-400 leading-tight">This VPS is isolated in the UMPSAH NAS sandbox. Port 3000-4000 are open for internal traffic.</p>
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                <Server className="w-16 h-16 text-slate-700 mb-4 stroke-1" />
-                <p className="text-sm font-bold text-slate-600">Select an instance to view telemetry and control panel</p>
               </div>
-            )}
-          </div>
-        </div>
+
+              {/* Console Mock */}
+              <div className="bg-black border border-slate-800 rounded-2xl h-48 mb-6 p-4 font-mono text-xs overflow-y-auto text-emerald-400">
+                <p className="text-slate-500 mb-2">Last login: {new Date().toUTCString()} from 192.168.1.1</p>
+                {selectedInstance.status === 'running' ? (
+                  <>
+                    <p>root@{selectedInstance.id.replace('-', '')}:~# systemctl status</p>
+                    <p>● System is running normally.</p>
+                    <p className="animate-pulse mt-2">_</p>
+                  </>
+                ) : (
+                  <p className="text-rose-500">Instance is stopped. Start instance to access terminal.</p>
+                )}
+              </div>
+
+              {/* Files / Scripts */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Terminal className="w-5 h-5 text-indigo-400" /> Attached Scripts & Files
+                  </h3>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    className="hidden" 
+                  />
+                  <button 
+                    onClick={handleFileUploadClick} 
+                    disabled={uploading}
+                    className="px-4 py-2 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-bold uppercase tracking-widest hover:bg-indigo-600/30 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <UploadCloud className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+                
+                <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-3 gap-4 content-start">
+                  {selectedInstance.files.map((file, idx) => (
+                    <div key={idx} className="bg-black/40 border border-slate-700/50 rounded-xl p-3 flex items-center gap-3 hover:border-indigo-500/50 transition-colors cursor-pointer">
+                      <FileCode2 className="w-8 h-8 text-indigo-400" />
+                      <span className="text-sm font-mono text-slate-300 truncate">{file}</span>
+                    </div>
+                  ))}
+                  {selectedInstance.files.length === 0 && (
+                    <div className="col-span-full text-center text-slate-500 text-sm py-10">No scripts deployed to this instance.</div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );
-};
-
-export default VPSModule;
+}

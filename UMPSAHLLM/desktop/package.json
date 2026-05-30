@@ -1,0 +1,42 @@
+{
+  "name": "umpsahllm-desktop",
+  "version": "1.0.0",
+  "description": "UMPSAHLLM Native Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . UMPSAHLLM --platform=win32 --arch=x64 --out=release --overwrite"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.umpsahclaw.umpsahllm",
+    "productName": "UMPSAHLLM",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "../backend/**/*",
+      "../frontend/dist/**/*"
+    ]
+  }
+}

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Sparkles, Cpu, Send, Bot, MessageSquare, ShieldCheck, ChevronRight, Loader2, Settings2, X, Check } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { localLLMService } from '../../services/localLLMService';
+import Mascot from '../ui/Mascot';
+import { useVoice } from '../../hooks/useVoice';
 
 const AgentModule = () => {
   const { availableModels, updateModelRole } = useAppStore();
@@ -13,6 +15,12 @@ const AgentModule = () => {
   const [activeStep, setActiveStep] = useState(0); // 0: Idle, 1: Gathering, 2: Synthesizing, 3: Completed
   const [showSettings, setShowSettings] = useState(false);
   const scrollRef = useRef(null);
+
+  const { isListening, isSpeaking, transcript, startListening, stopListening, speak, setTranscript } = useVoice();
+
+  useEffect(() => {
+    if (transcript) setPrompt(transcript);
+  }, [transcript]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -82,9 +90,23 @@ const AgentModule = () => {
       const responseText = await localLLMService.generate([{ role: 'user', content: synthesisPrompt }]);
       setConsensus(responseText);
       setActiveStep(3);
+      speak(responseText); // Mascot speaks the consensus
+
+      // Save to Memory Tree
+      try {
+        await fetch('http://localhost:3002/api/memory/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: currentPrompt, consensus: responseText })
+        });
+      } catch (memoryErr) {
+        console.error('Failed to save to memory tree:', memoryErr);
+      }
+
     } catch (err) {
       console.error(err);
       setConsensus("Synthesis failed. Ensure a local model is downloaded and loaded.");
+      speak("Synthesis failed. Ensure a local model is downloaded and loaded.");
     } finally {
       setIsDiscussing(false);
     }
@@ -94,15 +116,22 @@ const AgentModule = () => {
     <div className="h-full flex flex-col p-8 max-w-6xl mx-auto w-full relative">
       <div className="flex-1 flex flex-col gap-8 overflow-hidden">
         
-        {/* Header */}
-        <div className="flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shadow-lg shadow-indigo-500/10">
-              <Brain className="w-7 h-7 text-indigo-400" />
-            </div>
+        {/* Header with Mascot */}
+        <div className="flex flex-col md:flex-row items-center justify-between shrink-0 gap-6">
+          <div className="flex items-center gap-6 w-full md:w-auto">
+            <Mascot 
+              isSpeaking={isSpeaking} 
+              isListening={isListening} 
+              onToggleListen={isListening ? stopListening : startListening} 
+            />
             <div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Consensus Engine</h2>
-              <p className="text-slate-400 text-sm font-medium">Multi-agent logic verification & synthesis.</p>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                  <Brain className="w-4 h-4 text-indigo-400" />
+                </div>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tight">Consensus Engine</h2>
+              </div>
+              <p className="text-slate-400 text-sm font-medium">Multi-agent logic verification & synthesis with Native Voice.</p>
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -114,7 +143,7 @@ const AgentModule = () => {
              >
                 <Settings2 className="w-4 h-4" /> {showSettings ? 'Close Config' : 'Configure Roles'}
              </button>
-             <div className="flex flex-col items-end">
+             <div className="flex flex-col items-end hidden sm:flex">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Cluster</p>
                 <div className="flex -space-x-2 mt-1">
                    {availableModels.map(m => (
@@ -267,7 +296,10 @@ const AgentModule = () => {
                   className="flex-1 bg-transparent border-none outline-none text-white px-4 py-2 placeholder:text-slate-600 font-bold text-lg resize-none custom-scrollbar"
                   placeholder="Ask the cluster for a verified answer..."
                   value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                    setTranscript(e.target.value);
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), startDiscussion())}
                   disabled={isDiscussing}
                 />

@@ -28,6 +28,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./UMPSAHLLM/backend/training_data:/app/training_data
+      - ./UMPSAHLLM/backend/vault:/app/vault
     depends_on:
       - ollama
     restart: always
@@ -38,7 +39,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: umpsah-tunnel
     # Replace the variable below with your token or use an .env file
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate --protocol http2 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - backend
     restart: always

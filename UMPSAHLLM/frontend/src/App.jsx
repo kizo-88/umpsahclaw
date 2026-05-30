@@ -9,6 +9,8 @@ import PCControlModule from './components/pc-control/PCControlModule';
 import AutomationModule from './components/automation/AutomationModule';
 import CodingModule from './components/coding/CodingModule';
 import BrowserModule from './components/browser/BrowserModule';
+import MemoryModule from './components/memory/MemoryModule';
+import IntegrationsModule from './components/integrations/IntegrationsModule';
 import { useAppStore } from './store/useAppStore';
 import LoginPage from './components/auth/LoginPage';
 import ModelHub from './components/hub/ModelHub';
@@ -69,6 +71,8 @@ function App() {
     switch(mode) {
       case 'chat': return <ChatModule />;
       case 'ai-agent': return <AgentModule />;
+      case 'memory': return <MemoryModule />;
+      case 'integrations': return <IntegrationsModule />;
       case 'admin': return <AdminModule />;
       case 'pc-control': return <PCControlModule />;
       case 'automation': return <AutomationModule />;
@@ -99,7 +103,7 @@ function App() {
       <main className="flex-1 flex flex-col relative z-20 bg-slate-950/40 backdrop-blur-3xl overflow-hidden">
         <header className="h-24 min-h-[6rem] border-b border-slate-900/60 flex items-center px-12 justify-between bg-slate-950/60 backdrop-blur-xl">
            <div className="flex flex-col">
-              <motion.h2 
+               <motion.h2 
                 key={mode}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -107,22 +111,9 @@ function App() {
               >
                 {mode.replace('-', ' ')}
               </motion.h2>
-              <div className="flex items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                 <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span> ai.umpt.my v0.9</span>
-                 <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span> pclaw active</span>
-              </div>
            </div>
            
            <div className="flex items-center gap-10">
-              <div className="flex flex-col items-end gap-1">
-                 <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">RTX 3060 Node 01</p>
-                 <div className="flex items-center gap-2">
-                    <p className="text-xs font-mono text-indigo-400 font-black">4.2GB / 12GB</p>
-                    <div className="w-24 bg-slate-900 h-1 rounded-full overflow-hidden">
-                       <div className="bg-indigo-500 w-1/3 h-full"></div>
-                    </div>
-                 </div>
-              </div>
               <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400 shadow-xl shadow-indigo-500/20 flex items-center justify-center text-xs font-black text-white hover:bg-indigo-500 transition-all cursor-pointer active:scale-95 group overflow-hidden relative"
                    onClick={() => auth.signOut()}
               >

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { execFile } = require('child_process');
@@ -46,6 +47,93 @@ if (!fs.existsSync(TRAINING_DATA_DIR)) {
     fs.mkdirSync(TRAINING_DATA_DIR, { recursive: true });
 }
 
+const memoryService = require('./memoryService');
+const composioService = require('./composioService');
+
+const VPS_DATA_DIR = path.resolve(__dirname, 'vps_files');
+if (!fs.existsSync(VPS_DATA_DIR)) {
+    fs.mkdirSync(VPS_DATA_DIR, { recursive: true });
+}
+
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
+// --- VPS Script Upload (Phase 5) ---
+app.post('/api/vps/upload', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+        const instanceId = req.body.instanceId;
+        if (!instanceId) return res.status(400).json({ error: "Missing instance ID" });
+
+        const instanceDir = path.join(__dirname, 'vps_files', instanceId);
+        if (!fs.existsSync(instanceDir)) {
+            fs.mkdirSync(instanceDir, { recursive: true });
+        }
+
+        const filePath = path.join(instanceDir, req.file.originalname);
+        fs.renameSync(req.file.path, filePath);
+
+        // Upload to NAS via vpsService
+        const result = await vpsService.uploadFileToNAS(instanceId, filePath, req.file.originalname);
+
+        res.json({ success: true, filename: req.file.originalname, nas: result });
+    } catch (error) {
+        console.error("Upload error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/composio/execute', async (req, res) => {
+  try {
+    const { actionName, params } = req.body;
+    if (!actionName) return res.status(400).json({ error: 'Missing actionName' });
+    const result = await composioService.executeAction(actionName, params || {});
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/composio/status', async (req, res) => {
+  try {
+    const connections = await composioService.getConnections();
+    res.json({ success: true, connections });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/composio/connect', async (req, res) => {
+  try {
+    const { appName } = req.body;
+    if (!appName) return res.status(400).json({ error: 'Missing appName' });
+    const redirectUrl = await composioService.initiateConnection(appName);
+    res.json({ success: true, redirectUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/memory/save', async (req, res) => {
+  try {
+    const { prompt, consensus } = req.body;
+    if (!prompt || !consensus) return res.status(400).json({ error: 'Missing prompt or consensus' });
+    const id = await memoryService.saveToMemory(prompt, consensus);
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/memory/list', async (req, res) => {
+  try {
+    const memories = await memoryService.getAllMemories();
+    res.json({ success: true, memories });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/log', (req, res) => {
     const { prompt, response, engine, model, userId, timestamp } = req.body;
     
@@ -76,79 +164,29 @@ app.post('/api/log', (req, res) => {
     res.json({ status: 'logged' });
 });
 
-// VPS Management System (Phase 5) & Compute Engine (Docker)
-const Docker = require('dockerode');
-const docker = new Docker(); // Automatically connects to local docker socket/pipe
-let useDocker = false;
-
-// Test Docker connection on startup
-docker.ping().then(() => {
-    console.log("🐳 Docker Engine connected successfully! Compute Engine active.");
-    useDocker = true;
-}).catch((err) => {
-    console.log("⚠️ Docker Engine not detected. VPS Manager running in Mock Mode.");
-});
-
-const VPS_REGISTRY = path.resolve(__dirname, 'vps_registry.json');
-if (!fs.existsSync(VPS_REGISTRY)) {
-    fs.writeFileSync(VPS_REGISTRY, JSON.stringify([
-        { id: 'vps-01', name: 'Web Server Alpha', status: 'running', ip: '172.17.0.2', type: 'Node.js' },
-        { id: 'vps-02', name: 'Database Prod', status: 'running', ip: '172.17.0.3', type: 'PostgreSQL' }
-    ]));
-}
+// VPS Management System (Phase 5) & Compute Engine (NAS SSH)
+const vpsService = require('./vpsService');
 
 app.get('/api/vps/list', async (req, res) => {
-    if (useDocker) {
-        try {
-            const containers = await docker.listContainers({ all: true });
-            const vpsList = containers.map(c => ({
-                id: c.Id.substring(0, 12),
-                name: c.Names[0].replace('/', ''),
-                status: c.State === 'running' ? 'running' : 'stopped',
-                ip: Object.values(c.NetworkSettings.Networks)[0]?.IPAddress || '-',
-                cpu: c.State === 'running' ? 'N/A' : '0%', // Requires stats stream for real CPU
-                ram: c.State === 'running' ? 'N/A' : '0B',
-                uptime: c.Status,
-                type: c.Image
-            }));
-            return res.json(vpsList);
-        } catch (e) {
-            console.error("Docker error:", e);
-        }
-    }
-
-    // Fallback to Mock
-    const data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
-    res.json(data.map(v => ({
-        ...v,
-        cpu: v.status === 'running' ? `${Math.floor(Math.random() * 20)}%` : '0%',
-        ram: v.status === 'running' ? `${Math.floor(Math.random() * 512)}MB / 1GB` : '0B / 1GB',
-        uptime: v.status === 'running' ? '14d 2h' : '-'
-    })));
+    const list = await vpsService.getVPSList();
+    res.json(list);
 });
 
 app.post('/api/vps/toggle', async (req, res) => {
     const { id } = req.body;
+    const result = await vpsService.toggleVPS(id);
+    res.json(result);
+});
 
-    if (useDocker) {
-        try {
-            const container = docker.getContainer(id);
-            const info = await container.inspect();
-            if (info.State.Running) {
-                await container.stop();
-            } else {
-                await container.start();
-            }
-            return res.json({ status: 'updated via Docker' });
-        } catch (e) {
-            console.error("Docker toggle error:", e);
-        }
-    }
+app.post('/api/vps/create', async (req, res) => {
+    const { name, ip, os } = req.body;
+    const result = await vpsService.createVPS(name, ip, os);
+    res.json(result);
+});
 
-    let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
-    data = data.map(v => v.id === id ? { ...v, status: v.status === 'running' ? 'stopped' : 'running' } : v);
-    fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
-    res.json({ status: 'updated' });
+app.delete('/api/vps/:id', async (req, res) => {
+    const result = await vpsService.deleteVPS(req.params.id);
+    res.json(result);
 });
 
 // Automation Execution Endpoint

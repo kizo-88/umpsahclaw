@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   Cpu,
   Brain,
-  Layout
+  Layout,
+  Database,
+  Blocks
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -21,6 +23,8 @@ const Sidebar = () => {
     { id: 'hub', label: 'Model Hub', icon: Layout, color: 'text-indigo-400' },
     { id: 'chat', label: 'AI Chat', icon: MessageSquare, color: 'text-sky-400' },
     { id: 'ai-agent', label: 'AI Agent', icon: Brain, color: 'text-purple-400' },
+    { id: 'memory', label: 'Memory Tree', icon: Database, color: 'text-emerald-400' },
+    { id: 'integrations', label: 'Integrations', icon: Blocks, color: 'text-rose-400' },
     { id: 'automation', label: 'Automation', icon: Zap, color: 'text-amber-400' },
     { id: 'pc-control', label: 'PC Control', icon: Gamepad2, color: 'text-emerald-400' },
     { id: 'browser', label: 'Agent Browser', icon: Globe, color: 'text-sky-400' },
