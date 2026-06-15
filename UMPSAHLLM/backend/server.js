@@ -50,6 +50,56 @@ if (!fs.existsSync(TRAINING_DATA_DIR)) {
 const memoryService = require('./memoryService');
 const composioService = require('./composioService');
 
+// --- Ollama client (NAS engine) ---
+const { Ollama } = require('ollama');
+const ollama = new Ollama({ host: process.env.OLLAMA_HOST || 'http://localhost:11434' });
+
+// --- Shared interaction logger (training data JSONL + Markdown vault for RAG) ---
+function logInteraction({ prompt, response, engine, model, userId, timestamp } = {}) {
+  try {
+    const entry = JSON.stringify({
+      prompt,
+      response,
+      engine,
+      model,
+      userId,
+      timestamp: timestamp || new Date().toISOString(),
+    }) + '\n';
+    const logFile = path.join(TRAINING_DATA_DIR, `interactions_${new Date().toISOString().split('T')[0]}.jsonl`);
+    fs.appendFileSync(logFile, entry);
+
+    if (prompt && response) {
+      if (!fs.existsSync(VAULT_DIR)) fs.mkdirSync(VAULT_DIR, { recursive: true });
+      const safeTitle = prompt.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
+      const docName = `Memory_${Date.now()}_${safeTitle}.md`;
+      const docContent = `# User Query\n${prompt}\n\n# AI Response\n${response}\n\n*Engine: ${engine} | Model: ${model}*`;
+      fs.writeFileSync(path.join(VAULT_DIR, docName), docContent);
+    }
+  } catch (e) {
+    console.error('[logInteraction] failed:', e.message);
+  }
+}
+
+// Normalize incoming chat payloads to OpenAI-style {role, content} messages.
+function normalizeMessages(body = {}) {
+  if (Array.isArray(body.messages)) {
+    return body.messages.map((m) => ({ role: m.role || 'user', content: m.text || m.content || '' }));
+  }
+  if (body.message) return [{ role: 'user', content: body.message }];
+  return [];
+}
+
+// Optional admin gate for host-control (RCE-capable) endpoints. No-op unless
+// ADMIN_TOKEN is set, so existing flows keep working until you opt in. To enable:
+// set ADMIN_TOKEN on the NAS and send it as `X-Admin-Token` (VITE_ADMIN_TOKEN) from the UI.
+function requireAdmin(req, res, next) {
+  const required = process.env.ADMIN_TOKEN;
+  if (!required) return next(); // gate disabled
+  const provided = req.headers['x-admin-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (provided && provided === required) return next();
+  return res.status(401).json({ error: 'Unauthorized: admin token required for this endpoint.' });
+}
+
 const VPS_DATA_DIR = path.resolve(__dirname, 'vps_files');
 if (!fs.existsSync(VPS_DATA_DIR)) {
     fs.mkdirSync(VPS_DATA_DIR, { recursive: true });
@@ -135,32 +185,7 @@ app.get('/api/memory/list', async (req, res) => {
 });
 
 app.post('/api/log', (req, res) => {
-    const { prompt, response, engine, model, userId, timestamp } = req.body;
-    
-    // Save to training data
-    const logEntry = JSON.stringify({
-        prompt,
-        response,
-        engine,
-        model,
-        userId,
-        timestamp: timestamp || new Date().toISOString()
-    }) + '\n';
-    const logFile = path.join(TRAINING_DATA_DIR, `interactions_${new Date().toISOString().split('T')[0]}.jsonl`);
-    fs.appendFileSync(logFile, logEntry);
-
-    // Save to Vault for RAG
-    const VAULT_DIR = path.resolve(__dirname, 'vault');
-    if (!fs.existsSync(VAULT_DIR)) {
-        fs.mkdirSync(VAULT_DIR, { recursive: true });
-    }
-    if (prompt && response) {
-        const safeTitle = prompt.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
-        const docName = `Memory_${Date.now()}_${safeTitle}.md`;
-        const docContent = `# User Query\n${prompt}\n\n# AI Response\n${response}\n\n*Engine: ${engine} | Model: ${model}*`;
-        fs.writeFileSync(path.join(VAULT_DIR, docName), docContent);
-    }
-    
+    logInteraction(req.body || {});
     res.json({ status: 'logged' });
 });
 
@@ -191,7 +216,7 @@ app.delete('/api/vps/:id', async (req, res) => {
 
 // Automation Execution Endpoint
 const { exec } = require('child_process');
-app.post('/api/automation/bash', (req, res) => {
+app.post('/api/automation/bash', requireAdmin, (req, res) => {
     const { command } = req.body;
     if (!command) return res.status(400).json({ error: 'No command provided' });
     
@@ -203,60 +228,65 @@ app.post('/api/automation/bash', (req, res) => {
     });
 });
 
-app.post('/api/vps/create', async (req, res) => {
-    const { name, image = 'nginx:alpine' } = req.body;
+// NAS Engine: local Ollama inference with RAG context injection + logging.
+app.post('/api/nas-chat', async (req, res) => {
+    try {
+        const { model, userId } = req.body;
+        const userMsgs = normalizeMessages(req.body);
+        const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
+        const vaultContext = getVaultContext();
 
-    if (useDocker) {
-        try {
-            // First ensure the image exists or pull it
-            await new Promise((resolve, reject) => {
-                docker.pull(image, (err, stream) => {
-                    if (err) return reject(err);
-                    docker.modem.followProgress(stream, (err, res) => err ? reject(err) : resolve(res));
-                });
-            });
+        const messages = [
+            { role: 'system', content: `You are UMPSAHLLM, a NAS-hosted AI assistant. Be concise and helpful.${vaultContext}` },
+            ...userMsgs,
+        ];
 
-            const container = await docker.createContainer({
-                Image: image,
-                name: name.replace(/\s+/g, '-').toLowerCase() + '-' + Date.now().toString().slice(-4),
-                HostConfig: {
-                    Memory: 512 * 1024 * 1024 // 512MB RAM Limit
-                }
-            });
-            await container.start();
-            return res.json({ status: 'created', id: container.id });
-        } catch (e) {
-            console.error("Docker create error:", e);
-            return res.status(500).json({ error: "Failed to provision via Docker" });
-        }
+        const completion = await ollama.chat({
+            model: model || process.env.NAS_MODEL || 'llama3.1:8b',
+            messages,
+            stream: false,
+        });
+        const text = completion?.message?.content || '';
+
+        logInteraction({ prompt: lastUser?.content, response: text, engine: 'NAS Ollama', model: model || 'llama3.1:8b', userId });
+        res.json({ response: text });
+    } catch (e) {
+        console.error('[nas-chat] error:', e.message);
+        res.status(500).json({ response: `[NAS Engine error]: ${e.message}` });
     }
-
-    // Mock Fallback
-    let data = JSON.parse(fs.readFileSync(VPS_REGISTRY));
-    data.push({
-        id: `vps-mock-${Date.now()}`,
-        name: name,
-        status: 'running',
-        ip: `172.17.0.${Math.floor(Math.random()*100)}`,
-        type: image
-    });
-    fs.writeFileSync(VPS_REGISTRY, JSON.stringify(data));
-    res.json({ status: 'created' });
 });
 
+// Cloud Engine: secure server-side proxy to an OpenAI-compatible API.
 app.post('/api/cloud-chat', async (req, res) => {
-    const { message, model, sessionId } = req.body;
     const API_KEY = process.env.CLOUD_LLM_API_KEY;
-
     if (!API_KEY) {
-        return res.json({ response: "[System]: Cloud Engine API Key missing. Please configure CLOUD_LLM_API_KEY on the NAS." });
+        return res.json({ response: '[System]: Cloud Engine API Key missing. Please configure CLOUD_LLM_API_KEY on the NAS.' });
     }
+    try {
+        const { model, userId } = req.body;
+        const userMsgs = normalizeMessages(req.body);
+        const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
+        const vaultContext = getVaultContext();
+        const baseURL = process.env.CLOUD_LLM_BASE_URL || 'https://api.openai.com/v1';
 
-    // This is where we would call Gemini/OpenAI
-    // For now, returning a placeholder to demonstrate the secure proxy flow
-    const assistantMsg = `[Cloud Engine - ${model}]: I have received your request. (Cloud API Integration Active - Waiting for Final Key Validation)`;
-    
-    res.json({ response: assistantMsg });
+        const messages = [
+            { role: 'system', content: `You are UMPSAHLLM Cloud, a frontier AI assistant.${vaultContext}` },
+            ...userMsgs,
+        ];
+
+        const apiRes = await axios.post(
+            `${baseURL}/chat/completions`,
+            { model: model || process.env.CLOUD_LLM_MODEL || 'gpt-4o-mini', messages },
+            { headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' }, timeout: 60000 }
+        );
+        const text = apiRes.data?.choices?.[0]?.message?.content || '';
+
+        logInteraction({ prompt: lastUser?.content, response: text, engine: 'Cloud', model: model || 'gpt-4o-mini', userId });
+        res.json({ response: text });
+    } catch (e) {
+        console.error('[cloud-chat] error:', e.response?.data || e.message);
+        res.status(500).json({ response: `[Cloud Engine error]: ${e.response?.data?.error?.message || e.message}` });
+    }
 });
 
 const VAULT_DIR = path.resolve(__dirname, 'vault');
@@ -331,7 +361,7 @@ app.post('/api/fs/read', (req, res) => {
     }
 });
 
-app.post('/api/fs/write', (req, res) => {
+app.post('/api/fs/write', requireAdmin, (req, res) => {
     try {
         const { filePath, content } = req.body;
         const target = getSafePath(filePath);
@@ -347,7 +377,7 @@ app.post('/api/fs/write', (req, res) => {
     }
 });
 
-app.post('/api/fs/delete', (req, res) => {
+app.post('/api/fs/delete', requireAdmin, (req, res) => {
     try {
         const { filePath } = req.body;
         const target = getSafePath(filePath);
@@ -364,7 +394,7 @@ app.post('/api/fs/delete', (req, res) => {
     }
 });
 
-app.post('/api/fs/mkdir', (req, res) => {
+app.post('/api/fs/mkdir', requireAdmin, (req, res) => {
     try {
         const { filePath } = req.body;
         const target = getSafePath(filePath);
@@ -414,7 +444,7 @@ app.get('/api/pc/processes', (req, res) => {
     });
 });
 
-app.post('/api/pc/kill', (req, res) => {
+app.post('/api/pc/kill', requireAdmin, (req, res) => {
     const { pid } = req.body;
     const { exec } = require('child_process');
     exec(`taskkill /PID ${pid} /F`, (error, stdout) => {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, Sparkles, Cpu, Send, Bot, MessageSquare, ShieldCheck, ChevronRight, Loader2, Settings2, X, Check } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
@@ -94,7 +95,7 @@ const AgentModule = () => {
 
       // Save to Memory Tree
       try {
-        await fetch('http://localhost:3002/api/memory/save', {
+        await fetch(API_BASE + '/api/memory/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: currentPrompt, consensus: responseText })

@@ -1,74 +1,81 @@
-const { Composio } = require('composio-core');
+// Composio integration for UMPSAHLLM.
+// Standardized on the composio-core SDK. Degrades gracefully when COMPOSIO_API_KEY
+// is not configured so the backend never crashes on startup.
 
-// Initialize Composio SDK (Requires COMPOSIO_API_KEY in environment)
-// Fallback to a placeholder so it doesn't crash if missing during local development
-const composio = new Composio({
-  apiKey: process.env.COMPOSIO_API_KEY || 'dummy_key_for_dev'
-});
+const HAS_KEY = !!process.env.COMPOSIO_API_KEY;
+
+let composio = null;
+try {
+  const { Composio } = require('composio-core');
+  composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY || 'dummy_key_for_dev' });
+  console.log(HAS_KEY ? '🟢 Composio SDK initialized' : '⚠️ Composio SDK loaded WITHOUT an API key (set COMPOSIO_API_KEY)');
+} catch (e) {
+  console.warn('⚠️ Composio SDK unavailable:', e.message);
+}
+
+function ensureReady() {
+  if (!composio) throw new Error('Composio SDK not installed/initialized.');
+  if (!HAS_KEY) throw new Error('COMPOSIO_API_KEY is not configured on the NAS.');
+}
 
 /**
- * Fetch available tools for a given integration (e.g. "github", "gmail")
+ * Fetch available tools for a given integration (e.g. "github", "gmail").
  */
 async function getTools(appName) {
   try {
-    const tools = await composio.apps.getTools(appName);
-    return tools;
+    ensureReady();
+    return await composio.apps.getTools(appName);
   } catch (error) {
-    console.error(`Error fetching tools for ${appName}:`, error.message);
+    console.error(`[Composio] getTools(${appName}) failed:`, error.message);
     return [];
   }
 }
 
 /**
- * Execute a specific tool action via Composio
+ * List the apps the user has connected accounts for.
  */
-async function executeAction(actionName, params, entityId = "default") {
-  try {
-    const entity = await composio.getEntity(entityId);
-    const result = await entity.execute(actionName, params);
-    return result;
 async function getConnections() {
   try {
+    ensureReady();
     const connections = await composio.connectedAccounts.list();
-    return connections.items ? connections.items.map(c => c.appName) : [];
+    return connections.items ? connections.items.map((c) => c.appName) : [];
   } catch (error) {
-    console.error(`Error fetching connections:`, error.message || "Composio SDK Error");
-    return []; // Safe fallback
+    console.error('[Composio] getConnections failed:', error.message);
+    return []; // Safe fallback so the UI still renders.
   }
 }
 
-async function initiateConnection(appName, entityId = "default") {
+/**
+ * Kick off an OAuth connection flow for an app, returning the redirect URL.
+ */
+async function initiateConnection(appName, entityId = 'default') {
   try {
-    const connection = await composio.connectedAccounts.initiate({ 
-        appName: appName, 
-        authConfigIds: [],
-        redirectUrl: "http://localhost:5173/integrations" 
+    ensureReady();
+    const redirectBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const connection = await composio.connectedAccounts.initiate({
+      appName,
+      authConfigIds: [],
+      redirectUrl: `${redirectBase}/integrations`,
     });
     return connection.redirectUrl;
   } catch (error) {
-    console.error(`Error initiating connection for ${appName}:`, error.message || "Composio SDK Error");
-    // Fallback if SDK fails
-    console.log(`[ComposioService] Fallback to manual connection for ${appName}`);
-    return `https://dashboard.composio.dev/`;
+    console.error(`[Composio] initiateConnection(${appName}) failed:`, error.message);
+    // Fall back to the Composio dashboard so the user can connect manually.
+    return 'https://dashboard.composio.dev/';
   }
 }
 
-async function executeAction(actionName, params, entityId = "default") {
-  try {
-    const actionResult = await composio.actions.execute({
-      action: actionName,
-      params: params
-    });
-    return actionResult;
-  } catch (error) {
-    console.error(`Error executing action ${actionName}:`, error.message || "Composio SDK Error");
-    throw error;
-  }
+/**
+ * Execute a specific tool action via Composio.
+ */
+async function executeAction(actionName, params = {}, entityId = 'default') {
+  ensureReady();
+  return await composio.actions.execute({ action: actionName, params });
 }
 
 module.exports = {
   getTools,
   getConnections,
   initiateConnection,
-  executeAction
+  executeAction,
 };

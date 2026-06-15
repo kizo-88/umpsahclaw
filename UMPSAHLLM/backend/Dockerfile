@@ -15,6 +15,9 @@ WORKDIR /app
 COPY --from=go-builder /app/picoclaw /picoclaw
 RUN chmod +x /picoclaw
 
+# Build deps for native modules (sqlite3) on alpine/musl
+RUN apk add --no-cache python3 make g++
+
 # Copy Backend code
 COPY UMPSAHLLM/backend/package*.json ./
 RUN npm install --production

@@ -20,9 +20,17 @@ services:
       dockerfile: UMPSAHLLM/backend/Dockerfile
     container_name: umpsah-backend
     environment:
+      # Cloudflare tunnel ingress routes api.umpsahllm.com -> http://umpsah-backend:3001,
+      # so the container MUST listen on 3001 to match the dashboard config.
+      - PORT=3001
       - OLLAMA_HOST=http://ollama:11434
       - PICOCLAW_EXE_PATH=/picoclaw
+      - NAS_MODEL=${NAS_MODEL:-llama3.1:8b}
       - CLOUD_LLM_API_KEY=${CLOUD_LLM_API_KEY}
+      - CLOUD_LLM_BASE_URL=${CLOUD_LLM_BASE_URL:-https://api.openai.com/v1}
+      - CLOUD_LLM_MODEL=${CLOUD_LLM_MODEL:-gpt-4o-mini}
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - FRONTEND_URL=${FRONTEND_URL:-https://umpsahllm.web.app}
     ports:
       - "3001:3001"
     volumes:

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { API_BASE } from '../../config';
 import { Database, Search, ZoomIn, ZoomOut, Maximize, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ForceGraph2D from 'react-force-graph-2d';
@@ -22,7 +23,7 @@ export default function MemoryModule() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3002/api/memory/list')
+    fetch(API_BASE + '/api/memory/list')
       .then(res => res.json())
       .then(data => {
         if (data.success) {

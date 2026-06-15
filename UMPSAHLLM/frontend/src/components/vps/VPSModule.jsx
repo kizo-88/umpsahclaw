@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../../config';
 import { Server, Plus, Terminal, Play, Square, Trash2, HardDrive, UploadCloud, FileCode2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -60,7 +61,7 @@ export default function VPSModule() {
     formData.append('instanceId', selectedInstance.id);
 
     try {
-      const response = await fetch('http://localhost:3002/api/vps/upload', {
+      const response = await fetch(API_BASE + '/api/vps/upload', {
         method: 'POST',
         body: formData
       });

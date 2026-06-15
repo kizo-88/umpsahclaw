@@ -6,6 +6,7 @@ import { db, auth } from '../../firebase';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
 import { localLLMService } from '../../services/localLLMService';
+import { API_BASE } from '../../config';
 
 const ChatModule = () => {
   const [messages, setMessages] = useState([
@@ -70,53 +71,76 @@ const ChatModule = () => {
 
     try {
       const modelMeta = models.find(m => m.id === selectedModel);
+      const engine = modelMeta?.engine || 'Local';
       let assistantMsg = "";
-      // 🚀 Step 1: Fetch RAG Context from NAS
-      let ragContext = "";
-      try {
-        const ragRes = await fetch('http://localhost:3002/api/rag/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: userMsg })
-        });
-        const ragData = await ragRes.json();
-        if (ragData.context) {
-          ragContext = `\n\n[NAS VAULT CONTEXT]:\n${ragData.context}`;
+
+      if (engine === 'Local') {
+        // 🚀 Step 1: Fetch RAG Context from NAS
+        let ragContext = "";
+        try {
+          const ragRes = await fetch(`${API_BASE}/api/rag/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: userMsg })
+          });
+          const ragData = await ragRes.json();
+          if (ragData.context) {
+            ragContext = `\n\n[NAS VAULT CONTEXT]:\n${ragData.context}`;
+          }
+        } catch (e) {
+          console.log("NAS RAG unavailable.", e);
         }
-      } catch (e) {
-        console.log("NAS RAG unavailable.", e);
+
+        // 🚀 Step 2: Inject Context into Local Prompt
+        const localMessages = [...newMessages];
+        if (ragContext) {
+          localMessages.unshift({ role: 'system', text: `You are UMPSAHLLM. Use this context from the user's NAS vault to answer: ${ragContext}` });
+        }
+
+        // 🚀 Step 3: Local GPU Inference (WebLLM / WebGPU)
+        await localLLMService.generateStream(localMessages, (fullText) => {
+          assistantMsg = fullText;
+          setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
+          setIsTyping(false);
+        });
+        setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
+
+        // 📡 Centralized NAS Logging (server logs NAS/Cloud itself; only Local needs this)
+        fetch(`${API_BASE}/api/log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+          },
+          body: JSON.stringify({
+            prompt: userMsg,
+            response: assistantMsg,
+            engine: 'Local WebGPU',
+            model: selectedModel,
+            userId: auth.currentUser?.email || 'anonymous',
+            timestamp: new Date().toISOString()
+          })
+        }).catch(e => console.error("Logging failed", e));
+      } else {
+        // 🚀 NAS (Ollama) or Cloud (frontier proxy): server-side inference,
+        // which injects RAG context and logs the interaction itself.
+        const endpoint = engine === 'Cloud' ? '/api/cloud-chat' : '/api/nas-chat';
+        const res = await fetch(`${API_BASE}${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+          },
+          body: JSON.stringify({
+            messages: newMessages.map(m => ({ role: m.role, content: m.text })),
+            model: modelMeta?.serverModel,
+            userId: auth.currentUser?.email || 'anonymous'
+          })
+        });
+        const data = await res.json();
+        assistantMsg = data.response || data.error || '[No response from engine]';
+        setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
       }
-
-      // 🚀 Step 2: Inject Context into Local Prompt
-      const localMessages = [...newMessages];
-      if (ragContext) {
-        localMessages.unshift({ role: 'system', text: `You are UMPSAHLLM. Use this context from the user's NAS vault to answer: ${ragContext}` });
-      }
-
-      // 🚀 Step 3: Local GPU Inference
-      await localLLMService.generateStream(localMessages, (fullText) => {
-        assistantMsg = fullText;
-        setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: fullText }]);
-        setIsTyping(false);
-      });
-      setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg }]);
-
-      // 📡 Centralized NAS Logging
-      fetch('http://localhost:3002/api/log', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({
-          prompt: userMsg,
-          response: assistantMsg,
-          engine: 'Local WebGPU',
-          model: selectedModel,
-          userId: auth.currentUser?.email || 'anonymous',
-          timestamp: new Date().toISOString()
-        })
-      }).catch(e => console.error("Logging failed", e));
 
     } catch (err) {
       console.error(err);

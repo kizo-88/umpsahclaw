@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE } from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Search, RefreshCw, ChevronRight, Sparkles, Cpu, Link, MousePointer2 } from 'lucide-react';
 import { localLLMService } from '../../services/localLLMService';
@@ -50,11 +51,11 @@ const BrowserModule = () => {
 
     setCurrentUrl(targetUrl);
     setUrlInput(targetUrl);
-    setProxyUrl(`http://localhost:3002/proxy/${targetUrl}`);
+    setProxyUrl(`${API_BASE}/proxy/${targetUrl}`);
     setPageData({ title: '', text: '', loading: true, error: '' });
 
     try {
-      const res = await fetch('http://localhost:3002/api/browse', {
+      const res = await fetch(API_BASE + '/api/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: targetUrl })
