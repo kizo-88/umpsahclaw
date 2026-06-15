@@ -8,7 +8,9 @@ RUN go mod tidy
 RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o picoclaw ./cmd/picoclaw
 
 # Stage 2: Node.js Backend
-FROM node:18-alpine
+# Node 20+ required: newer undici (pulled in via the ollama client) needs the
+# global File class, which doesn't exist on Node 18 (ReferenceError: File is not defined).
+FROM node:20-alpine
 WORKDIR /app
 
 # Copy the built Go binary from the first stage
