@@ -1,0 +1,15 @@
+# Build context is this backend folder — keep it tiny.
+node_modules
+*.exe
+*.zip
+*.msi
+*.log
+deploy.log
+build
+vault
+training_data
+vps_files
+uploads
+workspace
+memory.sqlite
+.env

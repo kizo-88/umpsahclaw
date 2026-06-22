@@ -1,6 +1,6 @@
 # Node.js backend for UMPSAHLLM.
-# The picoclaw Go binary is unused by the Node brain, so we do NOT build it here
-# (keeps the image small and the build fast/reliable on NAS hardware).
+# Build context is THIS folder (UMPSAHLLM/backend) so the context stays tiny and the
+# build can't accidentally tar the repo's ollama_data model / desktop build / .exe files.
 # Node 20+ required: the newer undici pulled in via the ollama client references the
 # global File class, which does not exist on Node 18 (ReferenceError: File is not defined).
 FROM node:20-alpine
@@ -10,11 +10,11 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # Install backend dependencies
-COPY UMPSAHLLM/backend/package*.json ./
+COPY package*.json ./
 RUN npm install --production
 
-# Copy backend source
-COPY UMPSAHLLM/backend/ .
+# Copy backend source (context = UMPSAHLLM/backend; see .dockerignore)
+COPY . .
 
 ENV OLLAMA_HOST=http://ollama:11434
 EXPOSE 3001

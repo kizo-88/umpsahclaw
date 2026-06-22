@@ -16,8 +16,8 @@ services:
   # This container runs the Node.js API and the PicoClaw engine
   backend:
     build:
-      context: .
-      dockerfile: UMPSAHLLM/backend/Dockerfile
+      context: ./UMPSAHLLM/backend
+      dockerfile: Dockerfile
     container_name: umpsah-backend
     environment:
       # Cloudflare tunnel ingress routes api.umpsahllm.com -> http://umpsah-backend:3001,
