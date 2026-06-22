@@ -1,10 +1,48 @@
+# Keep the backend image build context tiny.
+# The Dockerfile only needs UMPSAHLLM/backend; exclude everything heavy/irrelevant
+# so `docker build` doesn't ship multi-GB of context off the NAS disk (that was
+# causing the build to hang at "Sending build context to Docker daemon").
+
 .git
 .gitignore
+*.md
+LICENSE
+.env
+.env.example
+.env.nas
+deploy.log
+
+# Big / irrelevant to the Node backend image
+ollama_data/
+assets/
 build/
 .picoclaw/
 config/
-.env
-.env.example
-*.md
-LICENSE
-assets/
+dist/
+docs/
+gitbooks/
+scripts/
+cmd/
+pkg/
+workspace/
+docker/
+*.exe
+*.zip
+*.msi
+
+# Node modules rebuilt inside the image
+**/node_modules/
+
+# Other UMPSAHLLM subprojects not needed by the backend
+UMPSAHLLM/desktop/
+UMPSAHLLM/admin-dashboard/
+UMPSAHLLM/openspace-core/
+UMPSAHLLM/frontend/
+openhuman-desktop/
+
+# Backend runtime data (mounted as volumes at run time)
+UMPSAHLLM/backend/vault/
+UMPSAHLLM/backend/training_data/
+UMPSAHLLM/backend/vps_files/
+UMPSAHLLM/backend/uploads/
+UMPSAHLLM/backend/workspace/
