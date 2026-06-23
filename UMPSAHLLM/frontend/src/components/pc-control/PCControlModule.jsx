@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 import { motion } from 'framer-motion';
 import { Cpu, HardDrive, Terminal, Folder, File, Trash, FolderPlus, FilePlus, XCircle, Activity, ArrowRight } from 'lucide-react';
 
@@ -20,7 +20,7 @@ const PCControlModule = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(API_BASE + '/api/pc/stats');
+      const res = await apiFetch('/api/pc/stats');
       const data = await res.json();
       setStats(data);
     } catch(e) {}
@@ -28,7 +28,7 @@ const PCControlModule = () => {
 
   const fetchProcesses = async () => {
     try {
-      const res = await fetch(API_BASE + '/api/pc/processes');
+      const res = await apiFetch('/api/pc/processes');
       const data = await res.json();
       setProcesses(data.processes || []);
     } catch(e) {}
@@ -36,7 +36,7 @@ const PCControlModule = () => {
 
   const killProcess = async (pid) => {
     try {
-      await fetch(API_BASE + '/api/pc/kill', {
+      await apiFetch('/api/pc/kill', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ pid })
@@ -47,7 +47,7 @@ const PCControlModule = () => {
 
   const fetchFiles = async (dir) => {
     try {
-      const res = await fetch(API_BASE + '/api/fs/list', {
+      const res = await apiFetch('/api/fs/list', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ folderPath: dir })
       });
@@ -61,7 +61,7 @@ const PCControlModule = () => {
     e.preventDefault();
     if(!newFolderName) return;
     try {
-      await fetch(API_BASE + '/api/fs/mkdir', {
+      await apiFetch('/api/fs/mkdir', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ filePath: cwd + '\\\\' + newFolderName })
       });
@@ -74,7 +74,7 @@ const PCControlModule = () => {
     e.preventDefault();
     if(!newFileName) return;
     try {
-      await fetch(API_BASE + '/api/fs/write', {
+      await apiFetch('/api/fs/write', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ filePath: cwd + '\\\\' + newFileName, content: '' })
       });
@@ -85,7 +85,7 @@ const PCControlModule = () => {
 
   const handleDelete = async (file) => {
     try {
-      await fetch(API_BASE + '/api/fs/delete', {
+      await apiFetch('/api/fs/delete', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ filePath: cwd + '\\\\' + file.name })
       });
@@ -100,7 +100,7 @@ const PCControlModule = () => {
     setTermInput('');
     setTermOutput(prev => [...prev, `C:\\> ${cmd}`]);
     try {
-      const res = await fetch(API_BASE + '/api/automation/bash', {
+      const res = await apiFetch('/api/automation/bash', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ command: cmd })
       });

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 import { 
   ReactFlow, 
   Controls, 
@@ -107,7 +107,7 @@ const AutomationModule = () => {
         } 
         else if (node.data.type === 'Bash Command') {
           const resolvedCommand = node.data.config.command.replace('{{input}}', String(inputData || ''));
-          const res = await fetch(API_BASE + '/api/automation/bash', {
+          const res = await apiFetch('/api/automation/bash', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command: resolvedCommand })
@@ -118,7 +118,7 @@ const AutomationModule = () => {
         }
         else if (node.data.type === 'HTTP Request') {
           const url = node.data.config.url.replace('{{input}}', String(inputData || ''));
-          const res = await fetch(`${API_BASE}/proxy/${url}`);
+          const res = await apiFetch(`/proxy/${url}`);
           result = await res.text();
         }
         else if (node.data.type === 'LLM Prompt') {

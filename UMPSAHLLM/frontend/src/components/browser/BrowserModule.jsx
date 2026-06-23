@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { API_BASE } from '../../config';
+import { API_BASE, apiFetch } from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, Search, RefreshCw, ChevronRight, Sparkles, Cpu, Link, MousePointer2 } from 'lucide-react';
 import { localLLMService } from '../../services/localLLMService';
@@ -55,7 +55,7 @@ const BrowserModule = () => {
     setPageData({ title: '', text: '', loading: true, error: '' });
 
     try {
-      const res = await fetch(API_BASE + '/api/browse', {
+      const res = await apiFetch('/api/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: targetUrl })

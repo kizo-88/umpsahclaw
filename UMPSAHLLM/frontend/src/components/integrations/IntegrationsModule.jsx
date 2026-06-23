@@ -1,5 +1,5 @@
 import React from 'react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 import { Blocks, Search, ArrowUpRight, GitPullRequest, Mail, FileText, MessageSquare, CreditCard, Calendar, Cloud, Database, Globe, Image, Layout, Server, Settings, Shield, ShoppingCart, Terminal, Users, Video, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -29,7 +29,7 @@ export default function IntegrationsModule() {
   const [connecting, setConnecting] = React.useState(null);
 
   const fetchStatus = () => {
-    fetch(API_BASE + '/api/composio/status')
+    apiFetch('/api/composio/status')
       .then(res => res.json())
       .then(data => {
         if (data.success) setConnectedApps(data.connections);
@@ -47,7 +47,7 @@ export default function IntegrationsModule() {
     if (connectedApps.includes(appId)) return; // Already connected
     setConnecting(appId);
     try {
-      const res = await fetch(API_BASE + '/api/composio/connect', {
+      const res = await apiFetch('/api/composio/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appName: appId })

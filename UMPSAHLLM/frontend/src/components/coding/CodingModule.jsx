@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { localLLMService } from '../../services/localLLMService';
@@ -44,7 +44,7 @@ const CodingModule = () => {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch(API_BASE + '/api/fs/list', {
+      const res = await apiFetch('/api/fs/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dirPath: '' })
@@ -59,7 +59,7 @@ const CodingModule = () => {
   const handleSelectFile = async (filePath) => {
     addLog(`Reading file: ${filePath}`, 'command');
     try {
-      const res = await fetch(API_BASE + '/api/fs/read', {
+      const res = await apiFetch('/api/fs/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath })
@@ -82,7 +82,7 @@ const CodingModule = () => {
     setIsExecuting(true);
     addLog(`Saving changes to ${targetFile}...`, 'command');
     try {
-      const res = await fetch(API_BASE + '/api/fs/write', {
+      const res = await apiFetch('/api/fs/write', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: targetFile, content: targetContent })
@@ -106,7 +106,7 @@ const CodingModule = () => {
     setIsExecuting(true);
     addLog(`Deleting ${activeFile}...`, 'command');
     try {
-      const res = await fetch(API_BASE + '/api/fs/delete', {
+      const res = await apiFetch('/api/fs/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: activeFile })
@@ -132,7 +132,7 @@ const CodingModule = () => {
     setIsExecuting(true);
     addLog(`Creating file ${filename}...`, 'command');
     try {
-      const res = await fetch(API_BASE + '/api/fs/write', {
+      const res = await apiFetch('/api/fs/write', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: filename, content: '// New File' })
