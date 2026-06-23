@@ -1,4 +1,3 @@
-import * as webllm from "@mlc-ai/web-llm";
 import { TokenJuice } from "../utils/TokenJuice";
 
 class LocalLLMService {
@@ -19,6 +18,9 @@ class LocalLLMService {
 
     this.onProgress = onProgress;
     this.currentModelId = modelId;
+
+    // Lazy-load WebLLM (large) only when the local engine is actually used — keeps it out of the main bundle.
+    const webllm = await import("@mlc-ai/web-llm");
 
     // Create a new engine
     this.initPromise = webllm.CreateMLCEngine(modelId, {

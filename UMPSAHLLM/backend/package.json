@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test test/rag.test.js",
     "build:native": "npx node-gyp configure build"
   },
   "keywords": [],

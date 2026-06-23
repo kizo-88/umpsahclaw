@@ -71,6 +71,7 @@ if (!fs.existsSync(TRAINING_DATA_DIR)) {
 
 const memoryService = require('./memoryService');
 const composioService = require('./composioService');
+const ragService = require('./ragService');
 
 // --- Ollama client (NAS engine) ---
 const { Ollama } = require('ollama');
@@ -256,7 +257,7 @@ app.post('/api/nas-chat', requireAuth, async (req, res) => {
         const { model, userId } = req.body;
         const userMsgs = normalizeMessages(req.body);
         const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
-        const vaultContext = getVaultContext();
+        const vaultContext = await ragService.search(ollama, lastUser?.content || '');
 
         const messages = [
             { role: 'system', content: `You are UMPSAHLLM, a NAS-hosted AI assistant. Be concise and helpful.${vaultContext}` },
@@ -278,6 +279,37 @@ app.post('/api/nas-chat', requireAuth, async (req, res) => {
     }
 });
 
+// NAS Engine (streaming): Server-Sent Events stream of Ollama tokens.
+app.post('/api/nas-chat-stream', requireAuth, async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (res.flushHeaders) res.flushHeaders();
+    try {
+        const { model, userId } = req.body;
+        const userMsgs = normalizeMessages(req.body);
+        const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
+        const vaultContext = await ragService.search(ollama, lastUser?.content || '');
+        const messages = [
+            { role: 'system', content: `You are UMPSAHLLM, a NAS-hosted AI assistant. Be concise and helpful.${vaultContext}` },
+            ...userMsgs,
+        ];
+        const stream = await ollama.chat({ model: model || process.env.NAS_MODEL || 'llama3.1:8b', messages, stream: true });
+        let full = '';
+        for await (const part of stream) {
+            const tok = part?.message?.content || '';
+            if (tok) { full += tok; res.write(`data: ${JSON.stringify({ token: tok })}\n\n`); }
+        }
+        logInteraction({ prompt: lastUser?.content, response: full, engine: 'NAS Ollama (stream)', model: model || 'llama3.1:8b', userId });
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+        res.end();
+    } catch (e) {
+        console.error('[nas-chat-stream] error:', e.message);
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.end();
+    }
+});
+
 // Cloud Engine: secure server-side proxy to an OpenAI-compatible API.
 app.post('/api/cloud-chat', requireAuth, async (req, res) => {
     const API_KEY = process.env.CLOUD_LLM_API_KEY;
@@ -288,7 +320,7 @@ app.post('/api/cloud-chat', requireAuth, async (req, res) => {
         const { model, userId } = req.body;
         const userMsgs = normalizeMessages(req.body);
         const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
-        const vaultContext = getVaultContext();
+        const vaultContext = await ragService.search(ollama, lastUser?.content || '');
         const baseURL = process.env.CLOUD_LLM_BASE_URL || 'https://api.openai.com/v1';
 
         const messages = [
@@ -483,7 +515,7 @@ app.post('/api/rag/search', async (req, res) => {
   
   console.log(`Executing RAG Search for: ${query}`);
   try {
-      const vaultContext = getVaultContext();
+      const vaultContext = await ragService.search(ollama, query);
       res.json({ context: vaultContext });
   } catch (error) {
       console.error(`RAG Search error: ${error}`);

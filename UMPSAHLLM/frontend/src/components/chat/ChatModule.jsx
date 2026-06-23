@@ -6,7 +6,7 @@ import { db, auth } from '../../firebase';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useAppStore } from '../../store/useAppStore';
 import { localLLMService } from '../../services/localLLMService';
-import { API_BASE } from '../../config';
+import { API_BASE, apiFetch } from '../../config';
 
 const ChatModule = () => {
   const [messages, setMessages] = useState([
@@ -121,16 +121,47 @@ const ChatModule = () => {
             timestamp: new Date().toISOString()
           })
         }).catch(e => console.error("Logging failed", e));
-      } else {
-        // 🚀 NAS (Ollama) or Cloud (frontier proxy): server-side inference,
-        // which injects RAG context and logs the interaction itself.
-        const endpoint = engine === 'Cloud' ? '/api/cloud-chat' : '/api/nas-chat';
-        const res = await fetch(`${API_BASE}${endpoint}`, {
+      } else if (engine === 'NAS') {
+        // 🚀 NAS (Ollama): streamed via SSE. Server injects RAG context + logs.
+        const res = await apiFetch('/api/nas-chat-stream', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-          },
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({
+            messages: newMessages.map(m => ({ role: m.role, content: m.text })),
+            model: modelMeta?.serverModel,
+            userId: auth.currentUser?.email || 'anonymous'
+          })
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const chunks = buf.split('\n\n');
+          buf = chunks.pop();
+          for (const c of chunks) {
+            const line = c.replace(/^data:\s*/, '').trim();
+            if (!line) continue;
+            try {
+              const evt = JSON.parse(line);
+              if (evt.token) {
+                assistantMsg += evt.token;
+                setMessages([...newMessages, { id: 'stream-temp', role: 'assistant', text: assistantMsg }]);
+                setIsTyping(false);
+              } else if (evt.error) {
+                assistantMsg = `[NAS Engine error]: ${evt.error}`;
+              }
+            } catch (e) { /* ignore partial frame */ }
+          }
+        }
+        setMessages([...newMessages, { id: Date.now() + 1, role: 'assistant', text: assistantMsg || '[No response from engine]' }]);
+      } else {
+        // 🚀 Cloud (frontier proxy): server-side inference + RAG + logging.
+        const res = await apiFetch('/api/cloud-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
           body: JSON.stringify({
             messages: newMessages.map(m => ({ role: m.role, content: m.text })),
             model: modelMeta?.serverModel,

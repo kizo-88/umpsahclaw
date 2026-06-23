@@ -1,0 +1,24 @@
+name: Backend tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'UMPSAHLLM/backend/**'
+      - '.github/workflows/test-backend.yml'
+  pull_request:
+    paths:
+      - 'UMPSAHLLM/backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: UMPSAHLLM/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node --test test/rag.test.js
