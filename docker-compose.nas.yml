@@ -31,15 +31,30 @@ services:
       - CLOUD_LLM_MODEL=${CLOUD_LLM_MODEL:-gpt-4o-mini}
       - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
       - FRONTEND_URL=${FRONTEND_URL:-https://umpsahllm.web.app}
+      # Persisted SQLite DB (survives rebuilds via the data volume below)
+      - MEMORY_DB_PATH=/app/data/memory.sqlite
+      # Security (all optional — leave blank to keep the API open)
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT:-}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://umpsahllm.web.app,https://umpsahllm.firebaseapp.com}
+      - RATE_LIMIT_PER_MIN=${RATE_LIMIT_PER_MIN:-120}
     ports:
       - "3001:3001"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./UMPSAHLLM/backend/training_data:/app/training_data
       - ./UMPSAHLLM/backend/vault:/app/vault
+      - ./UMPSAHLLM/backend/data:/app/data
     depends_on:
       - ollama
     restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # Cloudflare Tunnel (Secure Public Access)
   # This exposes your local backend to the internet without opening ports

@@ -21,10 +21,11 @@ If you are using **Synology DSM 7.2+** (Container Manager) or **QNAP** (Containe
 ### 2. Configure Your Secrets (`.env`)
 1. Duplicate `.env.nas` inside the project folder and rename the copy to `.env`.
 2. Open `.env` in a text editor on your computer or the NAS Text Editor.
-3. Verify your Cloudflare Tunnel Token is set:
+3. Set your Cloudflare Tunnel Token (get it from the Cloudflare Zero Trust dashboard — **never commit it**):
    ```env
-   CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoiZTI4NzY4ZTBiMjZiZDdkN2Y0MmI3MjJlMDIyNmRmMmIiLCJ0IjoiM2EzNTYzMTctNzZiNy00YTkxLTgzOTYtYjdhZWEwMzE4YjVhIiwicyI6Ill6UmlaV1kzTmpndFpXTTFZaTAwTVdNMUxXSTJNbVV0T1dGbE1EWmhabUl5TldFeCJ9
+   CLOUDFLARE_TUNNEL_TOKEN=<your-tunnel-token-here>
    ```
+   > ⚠️ A previous version of this file committed a real token in plaintext. If you used it, **rotate that token** in Cloudflare Zero Trust → Networks → Tunnels.
 
 ### 3. Deploy using Synology Container Manager
 1. Open **Container Manager** on your Synology NAS.

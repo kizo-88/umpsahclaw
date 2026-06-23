@@ -1,31 +1,53 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { execFile } = require('child_process');
 const path = require('path');
 const os = require('os');
+const { requireAuth } = require('./auth');
 
 const app = express();
 const port = process.env.PORT || 3002;
+app.set('trust proxy', 1); // behind Cloudflare / reverse proxy — needed for correct client IPs
 
-// Robust manual CORS middleware to ensure preflight OPTIONS and headers work perfectly behind Cloudflare/reverse proxies
+// Security headers. CSP/CORP relaxed so the web app can call this API cross-origin.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
+
+// CORS allowlist. Set ALLOWED_ORIGINS (comma-separated) to restrict; defaults cover the
+// web app + local dev. Set it to "*" to allow any origin (not recommended in production).
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
+  'https://umpsahllm.web.app,https://umpsahllm.firebaseapp.com,http://localhost:5173,http://localhost:3000')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+const ALLOW_ANY_ORIGIN = ALLOWED_ORIGINS.includes('*');
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin) {
+  if (origin && (ALLOW_ANY_ORIGIN || ALLOWED_ORIGINS.includes(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
-  } else {
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (ALLOW_ANY_ORIGIN) {
     res.header('Access-Control-Allow-Origin', '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, ngrok-skip-browser-warning');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Token, ngrok-skip-browser-warning');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
-app.use(express.json());
+
+app.use(express.json({ limit: '5mb' }));
+
+// Rate limit the public API to blunt abuse.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_PER_MIN) || 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
+// Health check for container healthcheck / uptime monitors.
+app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime(), ts: new Date().toISOString() }));
 
 // Use environment variable for the binary path (useful for Docker), fallback to local path
 const PICOCLAW_EXE = process.env.PICOCLAW_EXE_PATH || path.resolve(__dirname, '../../picoclaw.exe');
@@ -109,7 +131,7 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 // --- VPS Script Upload (Phase 5) ---
-app.post('/api/vps/upload', upload.single('file'), async (req, res) => {
+app.post('/api/vps/upload', requireAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "No file uploaded" });
         const instanceId = req.body.instanceId;
@@ -133,7 +155,7 @@ app.post('/api/vps/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-app.post('/api/composio/execute', async (req, res) => {
+app.post('/api/composio/execute', requireAuth, async (req, res) => {
   try {
     const { actionName, params } = req.body;
     if (!actionName) return res.status(400).json({ error: 'Missing actionName' });
@@ -153,7 +175,7 @@ app.get('/api/composio/status', async (req, res) => {
   }
 });
 
-app.post('/api/composio/connect', async (req, res) => {
+app.post('/api/composio/connect', requireAuth, async (req, res) => {
   try {
     const { appName } = req.body;
     if (!appName) return res.status(400).json({ error: 'Missing appName' });
@@ -164,7 +186,7 @@ app.post('/api/composio/connect', async (req, res) => {
   }
 });
 
-app.post('/api/memory/save', async (req, res) => {
+app.post('/api/memory/save', requireAuth, async (req, res) => {
   try {
     const { prompt, consensus } = req.body;
     if (!prompt || !consensus) return res.status(400).json({ error: 'Missing prompt or consensus' });
@@ -197,26 +219,26 @@ app.get('/api/vps/list', async (req, res) => {
     res.json(list);
 });
 
-app.post('/api/vps/toggle', async (req, res) => {
+app.post('/api/vps/toggle', requireAuth, async (req, res) => {
     const { id } = req.body;
     const result = await vpsService.toggleVPS(id);
     res.json(result);
 });
 
-app.post('/api/vps/create', async (req, res) => {
+app.post('/api/vps/create', requireAuth, async (req, res) => {
     const { name, ip, os } = req.body;
     const result = await vpsService.createVPS(name, ip, os);
     res.json(result);
 });
 
-app.delete('/api/vps/:id', async (req, res) => {
+app.delete('/api/vps/:id', requireAuth, async (req, res) => {
     const result = await vpsService.deleteVPS(req.params.id);
     res.json(result);
 });
 
 // Automation Execution Endpoint
 const { exec } = require('child_process');
-app.post('/api/automation/bash', requireAdmin, (req, res) => {
+app.post('/api/automation/bash', requireAuth, requireAdmin, (req, res) => {
     const { command } = req.body;
     if (!command) return res.status(400).json({ error: 'No command provided' });
     
@@ -229,7 +251,7 @@ app.post('/api/automation/bash', requireAdmin, (req, res) => {
 });
 
 // NAS Engine: local Ollama inference with RAG context injection + logging.
-app.post('/api/nas-chat', async (req, res) => {
+app.post('/api/nas-chat', requireAuth, async (req, res) => {
     try {
         const { model, userId } = req.body;
         const userMsgs = normalizeMessages(req.body);
@@ -257,7 +279,7 @@ app.post('/api/nas-chat', async (req, res) => {
 });
 
 // Cloud Engine: secure server-side proxy to an OpenAI-compatible API.
-app.post('/api/cloud-chat', async (req, res) => {
+app.post('/api/cloud-chat', requireAuth, async (req, res) => {
     const API_KEY = process.env.CLOUD_LLM_API_KEY;
     if (!API_KEY) {
         return res.json({ response: '[System]: Cloud Engine API Key missing. Please configure CLOUD_LLM_API_KEY on the NAS.' });
@@ -361,7 +383,7 @@ app.post('/api/fs/read', (req, res) => {
     }
 });
 
-app.post('/api/fs/write', requireAdmin, (req, res) => {
+app.post('/api/fs/write', requireAuth, requireAdmin, (req, res) => {
     try {
         const { filePath, content } = req.body;
         const target = getSafePath(filePath);
@@ -377,7 +399,7 @@ app.post('/api/fs/write', requireAdmin, (req, res) => {
     }
 });
 
-app.post('/api/fs/delete', requireAdmin, (req, res) => {
+app.post('/api/fs/delete', requireAuth, requireAdmin, (req, res) => {
     try {
         const { filePath } = req.body;
         const target = getSafePath(filePath);
@@ -394,7 +416,7 @@ app.post('/api/fs/delete', requireAdmin, (req, res) => {
     }
 });
 
-app.post('/api/fs/mkdir', requireAdmin, (req, res) => {
+app.post('/api/fs/mkdir', requireAuth, requireAdmin, (req, res) => {
     try {
         const { filePath } = req.body;
         const target = getSafePath(filePath);
@@ -444,7 +466,7 @@ app.get('/api/pc/processes', (req, res) => {
     });
 });
 
-app.post('/api/pc/kill', requireAdmin, (req, res) => {
+app.post('/api/pc/kill', requireAuth, requireAdmin, (req, res) => {
     const { pid } = req.body;
     const { exec } = require('child_process');
     exec(`taskkill /PID ${pid} /F`, (error, stdout) => {
