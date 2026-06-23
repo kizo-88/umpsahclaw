@@ -35,6 +35,63 @@ function initSchema() {
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  // Server-side conversation persistence (so history survives across devices).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY,
+      userId TEXT,
+      title TEXT,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversationId TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+function listConversations(userId) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT id, title, createdAt, updatedAt FROM conversations WHERE userId = ? ORDER BY updatedAt DESC`,
+      [userId || ''],
+      (err, rows) => (err ? reject(err) : resolve(rows))
+    );
+  });
+}
+
+function getConversationMessages(conversationId) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT role, content, createdAt FROM messages WHERE conversationId = ? ORDER BY id ASC`,
+      [conversationId],
+      (err, rows) => (err ? reject(err) : resolve(rows))
+    );
+  });
+}
+
+function addMessage(conversationId, userId, role, content, title) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO conversations (id, userId, title) VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET updatedAt = CURRENT_TIMESTAMP, title = COALESCE(conversations.title, excluded.title)`,
+      [conversationId, userId || '', title || null],
+      (err) => {
+        if (err) return reject(err);
+        db.run(
+          `INSERT INTO messages (conversationId, role, content) VALUES (?, ?, ?)`,
+          [conversationId, role, content],
+          function (e) { return e ? reject(e) : resolve(this.lastID); }
+        );
+      }
+    );
+  });
 }
 
 function saveToMemory(prompt, consensus) {
@@ -81,5 +138,8 @@ function getAllMemories() {
 
 module.exports = {
   saveToMemory,
-  getAllMemories
+  getAllMemories,
+  listConversations,
+  getConversationMessages,
+  addMessage,
 };

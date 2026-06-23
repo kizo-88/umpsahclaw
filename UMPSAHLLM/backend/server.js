@@ -72,6 +72,7 @@ if (!fs.existsSync(TRAINING_DATA_DIR)) {
 const memoryService = require('./memoryService');
 const composioService = require('./composioService');
 const ragService = require('./ragService');
+const agentService = require('./agentService');
 
 // --- Ollama client (NAS engine) ---
 const { Ollama } = require('ollama');
@@ -207,6 +208,30 @@ app.get('/api/memory/list', async (req, res) => {
   }
 });
 
+// --- Server-side conversation persistence (history survives across devices) ---
+app.get('/api/conversations', requireAuth, async (req, res) => {
+  try {
+    const userId = (req.user && req.user.uid) || req.query.userId || '';
+    res.json({ success: true, conversations: await memoryService.listConversations(userId) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    res.json({ success: true, messages: await memoryService.getConversationMessages(req.params.id) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const { role, content, title } = req.body;
+    if (!role || !content) return res.status(400).json({ error: 'role and content are required' });
+    const userId = (req.user && req.user.uid) || req.body.userId || '';
+    const id = await memoryService.addMessage(req.params.id, userId, role, content, title);
+    res.json({ success: true, id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/log', (req, res) => {
     logInteraction(req.body || {});
     res.json({ status: 'logged' });
@@ -340,6 +365,25 @@ app.post('/api/cloud-chat', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('[cloud-chat] error:', e.response?.data || e.message);
         res.status(500).json({ response: `[Cloud Engine error]: ${e.response?.data?.error?.message || e.message}` });
+    }
+});
+
+// Agent Engine: cloud LLM that can call the user's connected Composio tools.
+app.post('/api/agent-chat', requireAuth, async (req, res) => {
+    try {
+        const userMsgs = normalizeMessages(req.body);
+        const lastUser = [...userMsgs].reverse().find((m) => m.role === 'user');
+        const vaultContext = await ragService.search(ollama, lastUser?.content || '');
+        const messages = [
+            { role: 'system', content: `You are UMPSAHLLM, an AI agent that can use the user's connected tools to complete tasks. Use tools when helpful, then give a concise final answer.${vaultContext}` },
+            ...userMsgs,
+        ];
+        const out = await agentService.agentChat({ messages, apps: req.body.apps || [] });
+        logInteraction({ prompt: lastUser?.content, response: out.response, engine: 'Cloud Agent', model: process.env.CLOUD_LLM_MODEL || 'gpt-4o-mini', userId: req.body.userId });
+        res.json(out);
+    } catch (e) {
+        console.error('[agent-chat] error:', e.response?.data || e.message);
+        res.status(500).json({ response: `[Agent error]: ${e.message}` });
     }
 });
 
