@@ -36,7 +36,7 @@ const GenericModule = ({ title }) => (
 import DarkVeil from './components/ui/DarkVeil';
 
 function App() {
-  const { mode, activeModelId } = useAppStore();
+  const { mode, activeModelId, models } = useAppStore();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,11 +50,14 @@ function App() {
 
   useEffect(() => {
     if (activeModelId) {
-      localLLMService.init(activeModelId, (p) => {
-        console.log(`Auto-loading engine from cache: ${Math.round(p * 100)}%`);
-      }).catch(e => console.error("Auto-load failed", e));
+      const model = models.find(m => m.id === activeModelId);
+      if (model && model.engine === 'WebGPU') {
+        localLLMService.init(activeModelId, (p) => {
+          console.log(`Auto-loading engine from cache: ${Math.round(p * 100)}%`);
+        }).catch(e => console.error("Auto-load failed", e));
+      }
     }
-  }, [activeModelId]);
+  }, [activeModelId, models]);
 
   if (loading) {
     return (

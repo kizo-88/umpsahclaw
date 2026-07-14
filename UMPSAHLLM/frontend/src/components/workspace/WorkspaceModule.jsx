@@ -3,10 +3,20 @@ import { DocumentEditor } from "@onlyoffice/document-editor-react";
 import { API_BASE } from '../../config';
 
 export default function WorkspaceModule() {
-  // Determine the NAS IP by parsing API_BASE. 
-  // If running locally without .env, fallback to the known NAS IP.
   const apiHostname = new URL(API_BASE).hostname;
-  const initialNasIp = apiHostname === 'localhost' ? '10.204.45.152' : apiHostname;
+  
+  let initialNasIp = '10.204.45.152';
+  let initialDocServerUrl = `http://${initialNasIp}:8080/`;
+
+  if (apiHostname === 'api.umpsahllm.com') {
+    // Production Cloudflare Environment:
+    // Mixed content (HTTPS frontend -> HTTP document server) is strictly blocked by browsers.
+    // You MUST expose ONLYOFFICE securely via a new Cloudflare Tunnel pointing to localhost:8080.
+    initialDocServerUrl = 'https://office.umpsahllm.com/';
+  } else if (apiHostname !== 'localhost') {
+    initialNasIp = apiHostname;
+    initialDocServerUrl = `http://${initialNasIp}:8080/`;
+  }
   
   const [nasIp, setNasIp] = useState(initialNasIp);
   const [docLoaded, setDocLoaded] = useState(false);
@@ -16,8 +26,7 @@ export default function WorkspaceModule() {
   const documentUrl = `${backendUrl}/api/workspace/documents/document.txt`;
   const callbackUrl = `${backendUrl}/api/workspace/documents/callback`;
   
-  // The ONLYOFFICE Document Server is exposed on port 8080
-  const documentServerUrl = `http://${nasIp}:8080/`;
+  const documentServerUrl = initialDocServerUrl;
 
   useEffect(() => {
       // In a real environment, you might fetch the actual NAS IP from a config endpoint
