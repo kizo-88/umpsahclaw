@@ -19,6 +19,8 @@
 
 [中文](README.zh.md) | [日本語](README.ja.md) | [Português](README.pt-br.md) | [Tiếng Việt](README.vi.md) | [Français](README.fr.md) | **English**
 
+> 🚀 **NEW:** Discover the [UMPSAHLLM Agentic OS extension](./UMPSAHLLM/README.md) featuring Neural Memory, NAS VPS execution, and Composio tool integrations!
+
 </div>
 
 ---
