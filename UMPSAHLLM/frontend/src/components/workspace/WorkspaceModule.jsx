@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { DocumentEditor } from "@onlyoffice/document-editor-react";
+import { API_BASE } from '../../config';
 
 export default function WorkspaceModule() {
-  const [nasIp, setNasIp] = useState(window.location.hostname);
+  // Determine the NAS IP by parsing API_BASE. 
+  // If running locally without .env, fallback to the known NAS IP.
+  const apiHostname = new URL(API_BASE).hostname;
+  const initialNasIp = apiHostname === 'localhost' ? '10.204.45.152' : apiHostname;
+  
+  const [nasIp, setNasIp] = useState(initialNasIp);
   const [docLoaded, setDocLoaded] = useState(false);
 
-  // We assume the Node.js backend is running on the same host at port 3001
-  const backendUrl = `http://${nasIp}:3001`;
+  // Use API_BASE directly for the backend endpoints
+  const backendUrl = API_BASE;
   const documentUrl = `${backendUrl}/api/workspace/documents/document.txt`;
   const callbackUrl = `${backendUrl}/api/workspace/documents/callback`;
   
-  // The ONLYOFFICE Document Server is exposed on port 8080 (as per docker-compose)
+  // The ONLYOFFICE Document Server is exposed on port 8080
   const documentServerUrl = `http://${nasIp}:8080/`;
 
   useEffect(() => {
