@@ -67,3 +67,14 @@ services:
       - backend
     restart: always
 
+  # ONLYOFFICE Document Server
+  # Handles collaborative document editing for Workspace tab
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    container_name: umpsah-onlyoffice
+    environment:
+      - JWT_ENABLED=false
+    ports:
+      - "8080:80"
+    restart: always
+

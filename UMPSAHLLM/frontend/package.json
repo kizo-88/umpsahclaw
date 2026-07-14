@@ -12,6 +12,7 @@
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.83",
     "@monaco-editor/react": "^4.7.0",
+    "@onlyoffice/document-editor-react": "^2.2.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@xyflow/react": "^12.10.2",

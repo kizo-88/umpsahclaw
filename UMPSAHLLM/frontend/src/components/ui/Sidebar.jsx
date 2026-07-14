@@ -12,7 +12,8 @@ import {
   Brain,
   Layout,
   Database,
-  Blocks
+  Blocks,
+  FileText
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -30,6 +31,7 @@ const Sidebar = () => {
     { id: 'browser', label: 'Agent Browser', icon: Globe, color: 'text-sky-400' },
     { id: 'coding', label: 'Code IDE', icon: Code2, color: 'text-purple-400' },
     { id: 'vps', label: 'VPS Manager', icon: Server, color: 'text-rose-400' },
+    { id: 'workspace', label: 'Workspace', icon: FileText, color: 'text-blue-400' },
     { id: 'admin', label: 'Admin Panel', icon: ShieldCheck, color: 'text-slate-400' },
   ];
 

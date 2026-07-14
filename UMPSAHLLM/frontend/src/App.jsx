@@ -15,6 +15,7 @@ import { useAppStore } from './store/useAppStore';
 import LoginPage from './components/auth/LoginPage';
 import ModelHub from './components/hub/ModelHub';
 import VPSModule from './components/vps/VPSModule';
+import WorkspaceModule from './components/workspace/WorkspaceModule';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useState, useEffect } from 'react';
@@ -79,6 +80,7 @@ function App() {
       case 'browser': return <BrowserModule />;
       case 'coding': return <CodingModule />;
       case 'vps': return <VPSModule />;
+      case 'workspace': return <WorkspaceModule />;
       case 'hub': return <ModelHub />;
       default: return <ModelHub />;
     }

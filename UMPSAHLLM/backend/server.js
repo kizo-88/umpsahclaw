@@ -611,6 +611,42 @@ app.get('/proxy/*', async (req, res) => {
         res.status(500).send(`Proxy Error: ${e.message}`);
     }
 });
+
+// --- Workspace / ONLYOFFICE Integration ---
+const WORKSPACE_DIR = path.join(__dirname, 'workspace', 'docs');
+
+app.get('/api/workspace/documents/:filename', (req, res) => {
+    const filePath = path.join(WORKSPACE_DIR, req.params.filename);
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).send('Document not found');
+    }
+});
+
+app.post('/api/workspace/documents/callback', async (req, res) => {
+    try {
+        const body = req.body;
+        const filename = req.query.filename || 'document.txt'; 
+        const filePath = path.join(WORKSPACE_DIR, filename);
+
+        if (body.status === 2 || body.status === 3) { 
+            if (body.url) {
+                // Fetch the updated document from ONLYOFFICE Server
+                const response = await fetch(body.url);
+                if (!response.ok) throw new Error(`Failed to fetch saved document`);
+                const buffer = await response.arrayBuffer();
+                fs.writeFileSync(filePath, Buffer.from(buffer));
+                console.log(`[Workspace] Document ${filename} saved successfully.`);
+            }
+        }
+        res.json({ error: 0 });
+    } catch (err) {
+        console.error('[Workspace] Document save error:', err);
+        res.status(500).json({ error: 1, message: err.message });
+    }
+});
+
 const HOST = '0.0.0.0';
 app.listen(port, HOST, () => {
   console.log(`🚀 UMPSAHLLM Backend running on http://172.17.27.62:${port}`);
