@@ -16,6 +16,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { SparklesText } from './sparkles-text';
 
 const Sidebar = () => {
   const { mode, setMode } = useAppStore();
@@ -43,12 +44,10 @@ const Sidebar = () => {
       className="w-64 border-r border-slate-800 bg-slate-950/50 backdrop-blur-2xl flex flex-col p-4 shadow-2xl z-50 h-screen"
     >
       <div className="flex items-center gap-3 mb-10 px-2 pt-2">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center border border-indigo-400/30 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-          <Cpu className="text-white w-6 h-6" />
-        </div>
+        <img src="/logo.png" alt="UMPSA" className="w-11 h-11 object-contain rounded-lg" />
         <div>
-          <h1 className="text-lg font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">UMPSAHLLM</h1>
-          <p className="text-[10px] text-indigo-500 font-mono tracking-widest font-bold">ENTERPRISE OS</p>
+          <SparklesText text="UMPSAHLLM" className="text-md font-black tracking-tighter text-[var(--theme-text)]" sparklesCount={5} />
+          <p className="text-[9px] text-indigo-500 font-mono tracking-widest font-bold">ENTERPRISE OS</p>
         </div>
       </div>
 

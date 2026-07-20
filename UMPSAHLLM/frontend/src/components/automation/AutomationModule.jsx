@@ -48,7 +48,7 @@ const AutomationModule = () => {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, markerEnd: { type: MarkerType.ArrowClosed, color: '#6366f1' }, style: { stroke: '#6366f1', strokeWidth: 2 } }, eds)), [setEdges]);
+  const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, markerEnd: { type: MarkerType.ArrowClosed, color: '#45b89a' }, style: { stroke: '#45b89a', strokeWidth: 2 } }, eds)), [setEdges]);
   const onSelectionChange = useCallback(({ nodes }) => { setSelectedNodeId(nodes.length > 0 ? nodes[0].id : null); }, []);
 
   // -- ADD NODE HELPERS --
@@ -183,10 +183,11 @@ const AutomationModule = () => {
             onConnect={onConnect}
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
-            colorMode="dark"
+            colorMode="light"
+            style={{ backgroundColor: '#fbfaf7' }}
           >
-            <Background color="#334155" gap={20} />
-            <Controls className="bg-[#050505] border-white/5 fill-white" />
+            <Background color="#94a3b8" gap={20} />
+            <Controls className="bg-white border border-slate-200 rounded-lg fill-slate-700 shadow-sm" />
           </ReactFlow>
 
           {/* Add Node Floating Palette */}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut } from 'lucide-react';
+import { LogOut, Sun, Moon } from 'lucide-react';
 import Sidebar from './components/ui/Sidebar';
 import ChatModule from './components/chat/ChatModule';
 import AgentModule from './components/agent/AgentModule';
@@ -36,7 +36,7 @@ const GenericModule = ({ title }) => (
 import DarkVeil from './components/ui/DarkVeil';
 
 function App() {
-  const { mode, activeModelId, models } = useAppStore();
+  const { mode, activeModelId, availableModels, theme, setTheme } = useAppStore();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,15 +49,23 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (activeModelId) {
-      const model = models.find(m => m.id === activeModelId);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (activeModelId && availableModels) {
+      const model = availableModels.find(m => m.id === activeModelId);
       if (model && model.engine === 'WebGPU') {
         localLLMService.init(activeModelId, (p) => {
           console.log(`Auto-loading engine from cache: ${Math.round(p * 100)}%`);
         }).catch(e => console.error("Auto-load failed", e));
       }
     }
-  }, [activeModelId, models]);
+  }, [activeModelId, availableModels]);
 
   if (loading) {
     return (
@@ -118,7 +126,15 @@ function App() {
               </motion.h2>
            </div>
            
-           <div className="flex items-center gap-10">
+           <div className="flex items-center gap-6">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-10 h-10 rounded-xl bg-slate-900/50 hover:bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all cursor-pointer active:scale-95 shadow-sm"
+                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+              </button>
+              
               <div className="w-12 h-12 rounded-2xl bg-indigo-600 border border-indigo-400 shadow-xl shadow-indigo-500/20 flex items-center justify-center text-xs font-black text-white hover:bg-indigo-500 transition-all cursor-pointer active:scale-95 group overflow-hidden relative"
                    onClick={() => auth.signOut()}
               >

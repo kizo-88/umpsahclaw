@@ -46,12 +46,16 @@ export const useAppStore = create(
       
       activeModelId: null,
       setActiveModelId: (id) => set({ activeModelId: id }),
+
+      theme: 'light',
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'umpsahllm-storage',
       partialize: (state) => ({ 
         availableModels: state.availableModels,
-        activeModelId: state.activeModelId 
+        activeModelId: state.activeModelId,
+        theme: state.theme
       }),
     }
   )

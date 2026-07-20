@@ -102,7 +102,7 @@ export default function MemoryModule() {
       <div className="flex-1 flex gap-6 relative">
         <div 
           ref={containerRef}
-          className="flex-1 bg-[#050505]/60 backdrop-blur-3xl border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative cursor-crosshair"
+          className="flex-1 bg-notion-dots border border-slate-200 rounded-3xl overflow-hidden shadow-sm relative cursor-crosshair"
         >
           {!loading && (
             <ForceGraph2D
@@ -114,7 +114,7 @@ export default function MemoryModule() {
               nodeVal="val"
               nodeLabel="name"
               onNodeClick={handleNodeClick}
-              linkColor={() => 'rgba(255,255,255,0.1)'}
+              linkColor={() => 'rgba(55, 53, 47, 0.15)'}
               linkWidth={1}
               backgroundColor="transparent"
               nodeCanvasObjectMode={() => 'after'}
@@ -124,7 +124,7 @@ export default function MemoryModule() {
                 ctx.font = `${fontSize}px Sans-Serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillStyle = 'rgba(55, 53, 47, 0.85)';
                 if (node.id !== 'core') {
                   ctx.fillText(label, node.x, node.y + 8 + fontSize);
                 } else {

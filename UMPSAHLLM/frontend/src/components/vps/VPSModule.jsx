@@ -141,7 +141,7 @@ export default function VPSModule() {
       </div>
 
       {/* Main Detail View */}
-      <div className="flex-1 bg-[#050505]/60 backdrop-blur-3xl border border-white/5 rounded-3xl p-8 relative overflow-hidden shadow-2xl flex flex-col">
+      <div className="flex-1 bg-notion-dots border border-slate-200 rounded-3xl p-8 relative overflow-hidden shadow-sm flex flex-col">
         {!selectedInstance ? (
           <div className="m-auto text-center opacity-50 flex flex-col items-center">
             <HardDrive className="w-20 h-20 text-slate-600 mb-6" />
