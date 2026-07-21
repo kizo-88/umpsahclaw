@@ -615,13 +615,204 @@ app.get('/proxy/*', async (req, res) => {
 // --- Workspace / ONLYOFFICE Integration ---
 const WORKSPACE_DIR = path.join(__dirname, 'workspace', 'docs');
 
+const workspaceStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        if (!fs.existsSync(WORKSPACE_DIR)) {
+            fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+        }
+        cb(null, WORKSPACE_DIR);
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+});
+const workspaceUpload = multer({ storage: workspaceStorage });
+
+// Upload Endpoint
+app.post('/api/workspace/upload', workspaceUpload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+    console.log(`[Workspace] Uploaded file: ${req.file.originalname}`);
+    res.json({ 
+        filename: req.file.originalname, 
+        fileType: path.extname(req.file.originalname).substring(1).toLowerCase() 
+    });
+});
+
+// List Files Endpoint
+app.get('/api/workspace/files', (req, res) => {
+    try {
+        if (!fs.existsSync(WORKSPACE_DIR)) {
+            fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+        }
+        const files = fs.readdirSync(WORKSPACE_DIR);
+        res.json(files);
+    } catch (err) {
+        res.status(500).json({ error: 1, message: err.message });
+    }
+});
+
+// Workspace Config Endpoint (resolves LAN IP for OnlyOffice connection)
+app.get('/api/workspace/config', (req, res) => {
+    const networkInterfaces = os.networkInterfaces();
+    let lanIp = 'localhost';
+    
+    // Find the first non-internal IPv4 address
+    for (const devName in networkInterfaces) {
+        const iface = networkInterfaces[devName];
+        for (let i = 0; i < iface.length; i++) {
+            const alias = iface[i];
+            if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                lanIp = alias.address;
+                break;
+            }
+        }
+        if (lanIp !== 'localhost') break;
+    }
+    res.json({ lanIp, port: port });
+});
+
+// Delete Document Endpoint
+app.delete('/api/workspace/documents/:filename', (req, res) => {
+    const filePath = path.join(WORKSPACE_DIR, req.params.filename);
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`[Workspace] Deleted file: ${req.params.filename}`);
+            res.json({ status: 'ok' });
+        } else {
+            res.status(404).send('Document not found');
+        }
+    } catch (err) {
+        res.status(500).json({ error: 1, message: err.message });
+    }
+});
+
 app.get('/api/workspace/documents/:filename', (req, res) => {
     const filePath = path.join(WORKSPACE_DIR, req.params.filename);
-    if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).send('Document not found');
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).send('Document not found');
     }
+
+    // If client specifically requests text extraction (e.g. for offline mock editor)
+    if (req.query.text === 'true' && (req.params.filename.endsWith('.docx') || req.params.filename.endsWith('.doc'))) {
+        const scriptPath = path.join(__dirname, 'extract.ps1');
+        execFile('powershell', ['-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-filePath', filePath], (error, stdout, stderr) => {
+            if (error) {
+                console.error(`[Workspace] Extraction error:`, error, stderr);
+                return res.status(500).send('Error extracting text from document');
+            }
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.send(stdout);
+        });
+    } else {
+        res.sendFile(filePath);
+    }
+});
+
+// Direct PUT save endpoint for local / mock editor saving
+app.put('/api/workspace/documents/:filename', (req, res) => {
+    const filePath = path.join(WORKSPACE_DIR, req.params.filename);
+    const { content } = req.body;
+    if (content !== undefined) {
+        try {
+            if (!fs.existsSync(WORKSPACE_DIR)) {
+                fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
+            }
+            fs.writeFileSync(filePath, content, 'utf8');
+            console.log(`[Workspace] Saved file directly: ${req.params.filename}`);
+            res.json({ status: 'ok' });
+        } catch (err) {
+            res.status(500).json({ error: 1, message: err.message });
+        }
+    } else {
+        res.status(400).send('Missing content');
+    }
+});
+
+// Mock OnlyOffice script to allow local workspace testing without real OnlyOffice container
+app.get('/mock-onlyoffice/web-apps/apps/api/documents/api.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`
+window.DocsAPI = {
+  DocEditor: function(id, config) {
+    console.log("Mock OnlyOffice Editor Initialized", id, config);
+    const container = document.getElementById(id);
+    if (!container) return;
+    
+    container.innerHTML = \`
+      <div style="display:flex; flex-direction:column; height:100%; min-height:450px; background:#0f111a; border:1px solid #1e293b; border-radius:12px; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:12px 20px; border-bottom:1px solid #334155;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:#38bdf8; font-weight:bold; font-size:14px;">🖹</span>
+            <span style="color:#e2e8f0; font-weight:bold; font-size:14px; font-family:sans-serif;">\${config.document.title}</span>
+            <span style="background:#0284c7; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; font-family:sans-serif;">LOCAL MOCK EDITOR</span>
+          </div>
+          <button id="mock-save-btn" style="background:#4f46e5; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; font-family:sans-serif; transition:background 0.2s;">Save Document</button>
+        </div>
+        <textarea id="mock-editor-textarea" style="flex:1; width:100%; border:none; background:#0b0f19; color:#f8fafc; padding:20px; font-family:Consolas, Monaco, monospace; font-size:14px; outline:none; resize:none; line-height:1.6; min-height:380px;"></textarea>
+      </div>
+    \`;
+    
+    const textarea = document.getElementById('mock-editor-textarea');
+    const saveBtn = document.getElementById('mock-save-btn');
+    
+    // Fetch document content
+    fetch(config.document.url)
+      .then(r => r.text())
+      .then(text => {
+        textarea.value = text;
+      })
+      .catch(err => {
+        console.error("Mock Editor Fetch Error:", err);
+        textarea.value = "Error loading document.";
+      });
+      
+    saveBtn.onclick = () => {
+      saveBtn.disabled = true;
+      saveBtn.innerText = "Saving...";
+      
+      // Save content to the backend PUT endpoint
+      fetch(config.document.url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: textarea.value })
+      })
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to save content");
+        
+        // Trigger OnlyOffice callback to notify backend
+        return fetch(config.editorConfig.callbackUrl + "?filename=" + encodeURIComponent(config.document.title), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: 2,
+            url: config.document.url
+          })
+        });
+      })
+      .then(r => r.json())
+      .then(res => {
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Document";
+        console.log("Save callback result:", res);
+        alert("Document saved successfully!");
+      })
+      .catch(err => {
+        console.error("Mock Editor Save Error:", err);
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Document";
+        alert("Save failed: " + err.message);
+      });
+    };
+  }
+};
+    `);
 });
 
 app.post('/api/workspace/documents/callback', async (req, res) => {

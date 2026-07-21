@@ -11,11 +11,16 @@ import (
 )
 
 func TestGetConfigPath(t *testing.T) {
-	t.Setenv("HOME", "/tmp/home")
+	var want string
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", `C:\tmp\home`)
+		want = filepath.Join(`C:\tmp\home`, ".picoclaw", "config.json")
+	} else {
+		t.Setenv("HOME", "/tmp/home")
+		want = filepath.Join("/tmp/home", ".picoclaw", "config.json")
+	}
 
 	got := GetConfigPath()
-	want := filepath.Join("/tmp/home", ".picoclaw", "config.json")
-
 	assert.Equal(t, want, got)
 }
 

@@ -1,2 +1,3 @@
 Welcome to the ONLYOFFICE Workspace!
 You can edit this document collaboratively.
+Hello, this is a test edit of the document!
