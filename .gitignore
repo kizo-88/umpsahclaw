@@ -1,12 +1,71 @@
-node_modules/
-dist/
-.env
-.env.*
-*.exe
-.ollama/
-agentskills_temp/
-anthropic_skills_temp/
-*.zip
+```
+# Build artifacts
+pkg/
+
+# Dependencies
+vendor/
+
+# Logs
 *.log
-.picoclaw/
-picoclaw.exe
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
+
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.prof
+cover.out
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```
