@@ -1,24 +1,27 @@
-// Embeddings-based retrieval over the Markdown Vault.
+// Embeddings-based retrieval over the Markdown Vault synced to Supabase (pgvector).
 //
-// Uses Ollama embeddings (default model: nomic-embed-text — `ollama pull nomic-embed-text`)
-// to semantically rank vault documents for a query. If the embedding model isn't
-// available it transparently falls back to keyword-overlap + recency, so RAG always works.
+// Uses Ollama embeddings (default model: nomic-embed-text) to embed files from 
+// the NAS vault and stores them in Supabase. Performs vector similarity search 
+// on Supabase via match_documents RPC. Falls back to local keyword search if offline.
 
 const fs = require('fs');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text';
 const VAULT_DIR = process.env.VAULT_PATH || path.resolve(__dirname, 'vault');
 
-// In-memory index of { file, mtime, text, vector }. Rebuilt incrementally by mtime.
-let index = [];
-let embeddingsEnabled = true;
-
-function cosine(a, b) {
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-8);
+// Supabase client initialization
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+} else {
+  console.warn('[rag] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing. Supabase RAG disabled, falling back to local search.');
 }
+
+let embeddingsEnabled = true;
 
 async function embed(ollama, text) {
   const res = await ollama.embeddings({ model: EMBED_MODEL, prompt: String(text).slice(0, 8000) });
@@ -30,27 +33,56 @@ function listDocs() {
   return fs.readdirSync(VAULT_DIR).filter((f) => f.endsWith('.md'));
 }
 
-// Refresh the vault embedding index (only re-embeds new/changed files).
+// Refresh the vault embedding index on Supabase
 async function buildIndex(ollama) {
-  if (!embeddingsEnabled) return;
-  const existing = new Map(index.map((e) => [e.file, e]));
-  const next = [];
+  if (!embeddingsEnabled || !supabase) return;
+  
   for (const f of listDocs()) {
     const full = path.join(VAULT_DIR, f);
     const mtime = fs.statSync(full).mtimeMs;
-    const prev = existing.get(f);
-    if (prev && prev.mtime === mtime) { next.push(prev); continue; }
-    const text = fs.readFileSync(full, 'utf-8');
-    const vector = await embed(ollama, text);
-    next.push({ file: f, mtime, text, vector });
+    
+    try {
+      // Check if this version of the file is already embedded in Supabase
+      const { data: existingDoc } = await supabase
+        .from('documents')
+        .select('id, metadata')
+        .eq('metadata->>file', f)
+        .maybeSingle();
+
+      if (existingDoc && existingDoc.metadata && existingDoc.metadata.mtime === mtime) {
+        continue; // Skip, already up to date
+      }
+
+      const text = fs.readFileSync(full, 'utf-8');
+      const vector = await embed(ollama, text);
+      
+      const doc = {
+        content: text,
+        metadata: { file: f, mtime: mtime },
+        embedding: vector
+      };
+
+      if (existingDoc) {
+        // Update existing record
+        await supabase.from('documents').update(doc).eq('id', existingDoc.id);
+      } else {
+        // Insert new record
+        await supabase.from('documents').insert(doc);
+      }
+      console.log(`[rag] Synced ${f} to Supabase`);
+    } catch (err) {
+      console.error(`[rag] Failed to sync ${f} to Supabase:`, err.message);
+    }
   }
-  index = next;
 }
 
 function formatContext(docs) {
-  if (!docs.length) return '';
+  if (!docs || !docs.length) return '';
   let ctx = '\n\n=== LONG TERM MEMORY (Vault) ===\nRelevant context from your Markdown Vault:\n';
-  for (const d of docs) ctx += `\n--- ${d.file} ---\n${d.text}\n`;
+  for (const d of docs) {
+    const fileName = d.metadata ? d.metadata.file : 'Document';
+    ctx += `\n--- ${fileName} ---\n${d.content || d.text}\n`;
+  }
   return ctx;
 }
 
@@ -69,20 +101,23 @@ function fallbackSearch(query, k) {
 
 // Return the top-K most relevant vault docs for a query as a context string.
 async function search(ollama, query, k = 3) {
-  if (embeddingsEnabled) {
+  if (embeddingsEnabled && supabase) {
     try {
       await buildIndex(ollama);
-      if (index.length) {
-        const qv = await embed(ollama, query || '');
-        const ranked = index
-          .map((e) => ({ file: e.file, text: e.text, score: cosine(qv, e.vector) }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, k);
-        return formatContext(ranked);
-      }
+      const qv = await embed(ollama, query || '');
+      
+      // Call the match_documents RPC function in Supabase
+      const { data: ranked, error } = await supabase.rpc('match_documents', {
+        query_embedding: qv,
+        match_threshold: 0.3, // Similarity threshold
+        match_count: k
+      });
+
+      if (error) throw error;
+      
+      return formatContext(ranked);
     } catch (e) {
-      console.warn('[rag] embeddings unavailable, falling back to keyword/recency:', e.message);
-      embeddingsEnabled = false; // stop retrying the model this process lifetime
+      console.warn('[rag] Supabase embeddings search failed, falling back to keyword/recency:', e.message);
     }
   }
   return fallbackSearch(query, k);

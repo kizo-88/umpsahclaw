@@ -36,6 +36,8 @@ services:
       # Security (all optional — leave blank to keep the API open)
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
       - FIREBASE_SERVICE_ACCOUNT=${FIREBASE_SERVICE_ACCOUNT:-}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
       - ADMIN_TOKEN=${ADMIN_TOKEN:-}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://umpsahllm.web.app,https://umpsahllm.firebaseapp.com}
       - RATE_LIMIT_PER_MIN=${RATE_LIMIT_PER_MIN:-120}
