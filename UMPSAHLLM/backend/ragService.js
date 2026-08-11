@@ -14,9 +14,22 @@ const VAULT_DIR = process.env.VAULT_PATH || path.resolve(__dirname, 'vault');
 // Supabase client initialization
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// supabase-js eagerly builds a RealtimeClient, which needs a global WebSocket. Node < 22
+// has none, so createClient() throws during require() and takes the whole process down.
+// We only ever use .from()/.rpc(), never realtime — so hand it `ws` when the global is
+// missing, and degrade to local search if init fails for any other reason.
 let supabase = null;
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
+  try {
+    let realtime;
+    if (typeof globalThis.WebSocket === 'undefined') {
+      realtime = { transport: require('ws') };
+    }
+    supabase = createClient(supabaseUrl, supabaseKey, realtime ? { realtime } : undefined);
+  } catch (err) {
+    supabase = null;
+    console.warn(`[rag] Supabase client init failed (${err.message}). Falling back to local search.`);
+  }
 } else {
   console.warn('[rag] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing. Supabase RAG disabled, falling back to local search.');
 }
