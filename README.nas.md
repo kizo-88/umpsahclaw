@@ -7,6 +7,10 @@ Running the UMPSAHLLM stack directly on your local NAS (Synology, QNAP, or stand
 
 Here is how to set up the stack on your NAS using the **GUI (zero-CLI)** or **SSH**.
 
+> 🔧 **Already deployed?** For day-2 operations — deploying updates, changing env
+> vars, and diagnosing 502s or crash loops — see the
+> [NAS Deployment Runbook](docs/nas-runbook.md).
+
 ---
 
 ## 🛠️ Option A — Deploy via Synology / QNAP GUI (Zero-CLI)
